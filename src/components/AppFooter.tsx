@@ -4,7 +4,7 @@ export function AppFooter() {
   return (
     <footer className="app-footer">
       <div className="footer-socials">
-        <a href="https://github.com/BEERZXD" target="_blank" rel="noreferrer" aria-label="GitHub">
+        <a href="https://github.com/BEERZXD/kmitlnova" target="_blank" rel="noreferrer" aria-label="GitHub">
           <Github size={18} />
         </a>
         <a href="https://www.instagram.com/_bxxr.t/" target="_blank" rel="noreferrer" aria-label="Instagram">
