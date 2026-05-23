@@ -15,6 +15,7 @@ export function buildExportImageOptions(node: HTMLElement) {
       width: `${Math.ceil(node.scrollWidth)}px`,
       maxWidth: 'none',
       overflow: 'visible',
+      opacity: '1', // Ensure the exported JPEG is solid and fully visible
     },
   };
 }
@@ -27,9 +28,9 @@ export function createCenteredExportNode(source: HTMLElement) {
   const reportWidth = Math.ceil(source.scrollWidth);
 
   Object.assign(wrapper.style, {
-    position: 'absolute',
+    position: 'fixed',
     top: '0',
-    left: '-9999px',
+    left: '0',
     zIndex: '-9999',
     width: `${canvasWidth}px`,
     margin: '0',
@@ -38,6 +39,7 @@ export function createCenteredExportNode(source: HTMLElement) {
     overflow: 'hidden',
     pointerEvents: 'none',
     boxSizing: 'border-box',
+    opacity: '0.01', // Forces Safari to paint the element inside the viewport without stretching document scroll area
   });
 
   clone.classList.add(EXPORT_DESKTOP_CLASS);
