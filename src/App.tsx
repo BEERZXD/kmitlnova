@@ -136,8 +136,12 @@ export default function App() {
         capture.cleanup();
       }
     });
-    const res = await fetch(dataUrl);
-    const blob = await res.blob();
+    const [header, base64] = dataUrl.split(',');
+    const mime = header.match(/:(.*?);/)?.[1] ?? 'image/jpeg';
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    const blob = new Blob([bytes], { type: mime });
     const blobUrl = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.download = `kmitl-nova-${active}.jpg`;
@@ -145,7 +149,7 @@ export default function App() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    URL.revokeObjectURL(blobUrl);
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
   }
 
   function handleSelectionChange(next: Partial<ReportParams>) {
