@@ -39,7 +39,7 @@ export function createCenteredExportNode(source: HTMLElement) {
     margin: '0',
     padding: '0',
     background: '#f8f9fb',
-    overflow: 'visible',
+    overflow: 'hidden',
     pointerEvents: 'none',
     boxSizing: 'border-box',
   });
@@ -51,6 +51,16 @@ export function createCenteredExportNode(source: HTMLElement) {
     margin: '0 auto',
     overflow: 'visible',
     transform: 'none',
+  });
+
+  // Force-reset overflow on all descendants to prevent Safari iOS scrollbar bleed
+  clone.querySelectorAll('*').forEach((el) => {
+    const style = window.getComputedStyle(el);
+    if (style.overflowX === 'auto' || style.overflowX === 'scroll' ||
+        style.overflowY === 'auto' || style.overflowY === 'scroll') {
+      (el as HTMLElement).style.overflow = 'visible';
+      (el as HTMLElement).style.setProperty('-webkit-overflow-scrolling', 'auto');
+    }
   });
 
   wrapper.appendChild(clone);
