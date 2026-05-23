@@ -22,24 +22,35 @@ export function buildExportImageOptions(node: HTMLElement) {
 
 export function createCenteredExportNode(source: HTMLElement) {
   const document = source.ownerDocument;
+  const container = document.createElement('div');
   const wrapper = document.createElement('div');
   const clone = source.cloneNode(true) as HTMLElement;
   const canvasWidth = Math.ceil(source.scrollWidth + EXTRA_HORIZONTAL_CAPTURE_PADDING * 2);
   const reportWidth = Math.ceil(source.scrollWidth);
 
-  Object.assign(wrapper.style, {
-    position: 'fixed',
+  // Bounding box container to prevent scroll stretching
+  Object.assign(container.style, {
+    position: 'absolute',
     top: '0',
     left: '0',
+    width: '1px',
+    height: '1px',
+    overflow: 'hidden',
     zIndex: '-9999',
+    pointerEvents: 'none',
+  });
+
+  // True size wrapper to allow absolute desktop layouts
+  Object.assign(wrapper.style, {
+    position: 'absolute',
+    top: '0',
+    left: '0',
     width: `${canvasWidth}px`,
     margin: '0',
     padding: '0',
     background: '#ffffff',
     overflow: 'hidden',
-    pointerEvents: 'none',
     boxSizing: 'border-box',
-    opacity: '0.01', // Forces Safari to paint the element inside the viewport without stretching document scroll area
   });
 
   clone.classList.add(EXPORT_DESKTOP_CLASS);
@@ -52,7 +63,8 @@ export function createCenteredExportNode(source: HTMLElement) {
   });
 
   wrapper.appendChild(clone);
-  document.body.appendChild(wrapper);
+  container.appendChild(wrapper);
+  document.body.appendChild(container);
 
   // Force-reset overflow on all scrollable descendants after DOM insertion
   // so getComputedStyle returns real values
@@ -68,7 +80,7 @@ export function createCenteredExportNode(source: HTMLElement) {
 
   return {
     node: wrapper,
-    cleanup: () => wrapper.remove(),
+    cleanup: () => container.remove(),
   };
 }
 
