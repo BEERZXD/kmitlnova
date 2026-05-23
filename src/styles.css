@@ -698,6 +698,10 @@ button:disabled {
   text-align: center;
 }
 
+.empty-state.empty-state-fullscreen {
+  min-height: 100vh;
+}
+
 .empty-state h2,
 .empty-state p {
   margin: 0;

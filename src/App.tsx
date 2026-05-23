@@ -157,7 +157,7 @@ export default function App() {
   }
 
   if (booting) {
-    return <EmptyState state="loading" title="กำลังเริ่ม KMITL Nova" detail="กำลังตรวจสอบเซสชันในเครื่อง" />;
+    return <EmptyState state="loading" title="กำลังเริ่ม KMITL Nova" detail="กำลังตรวจสอบเซสชันในเครื่อง" fullscreen />;
   }
 
   if (!loggedIn) {
