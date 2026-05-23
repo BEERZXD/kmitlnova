@@ -26,7 +26,7 @@ function optionsFor(report: ReportData | undefined, key: 'semesters' | 'years' |
 
 export default function App() {
   const [loggedIn, setLoggedIn] = useState(false);
-  const [booting, setBooting] = useState(true);
+
   const [loginError, setLoginError] = useState('');
   const [active, setActive] = useState<ReportType>(initialTab);
   const [reports, setReports] = useState<Partial<Record<ReportType, ReportData>>>({});
@@ -88,7 +88,7 @@ export default function App() {
   useEffect(() => {
     getSession()
       .then((session) => setLoggedIn(session.loggedIn))
-      .finally(() => setBooting(false));
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -156,9 +156,7 @@ export default function App() {
     void loadReport(active, true, merged);
   }
 
-  if (booting) {
-    return <EmptyState state="loading" title="กำลังเริ่ม KMITL Nova" detail="กำลังตรวจสอบเซสชันในเครื่อง" fullscreen />;
-  }
+
 
   if (!loggedIn) {
     return <LoginView error={loginError} isLoading={loading} onSubmit={handleLogin} />;
