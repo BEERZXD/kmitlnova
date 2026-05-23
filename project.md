@@ -23,6 +23,7 @@ This project is related to `D:\Project\kmitlpromax`, the Chrome extension that m
 - Semester 3 must not appear if the student has no semester 3 registration rows.
 - Image export is image-only and captures the report surface, not the entire app shell. Exports temporarily force the report surface into the desktop report layout so mobile/iPad users still download a desktop-style image.
 - Mobile and iPad layouts keep dense timetable and grade report structures intact, using controlled horizontal scrolling on the timetable grid or table surface only. Report title cards and TBA sections stay in the normal page flow, and timetable scroll surfaces avoid reserved scrollbar gutters so grid borders align with the title card.
+- Exam timetable grid rows use auto sizing (not 1fr) and no min-height so date rows stay compact on mobile instead of inflating to fill the grid.
 
 ## Tech Stack
 - Frontend: React 19, Vite, TypeScript, CSS.
