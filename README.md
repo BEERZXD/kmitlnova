@@ -91,4 +91,4 @@ vercel.json           Vercel deployment configuration
 
 ## License
 
-Private project. Not licensed for redistribution.
+This project is licensed under the [MIT License](LICENSE).
