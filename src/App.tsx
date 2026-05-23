@@ -7,7 +7,7 @@ import { ExamView } from './components/ExamView';
 import { GradeView } from './components/GradeView';
 import { LoginView } from './components/LoginView';
 import { StudyView } from './components/StudyView';
-import { buildExportImageOptions, createCenteredExportNode, withDesktopExportLayout } from './exportImage';
+import { buildExportImageOptions, createCenteredExportNode } from './exportImage';
 import type { ApiOption, ReportData, ReportParams, ReportType } from './types';
 
 const initialTab: ReportType = 'study';
@@ -26,6 +26,7 @@ function optionsFor(report: ReportData | undefined, key: 'semesters' | 'years' |
 
 export default function App() {
   const [loggedIn, setLoggedIn] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   const [loginError, setLoginError] = useState('');
   const [active, setActive] = useState<ReportType>(initialTab);
@@ -128,52 +129,63 @@ export default function App() {
   async function handleExport() {
     const node = exportRef.current?.querySelector('.export-target') as HTMLElement | null;
     if (!node) return;
-    const dataUrl = await withDesktopExportLayout(node, async () => {
+
+    setIsExporting(true);
+    try {
       const capture = createCenteredExportNode(node);
+      let dataUrl: string;
       try {
+        // Wait one frame to let browser compute styles of offscreen clone
+        await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
+
         // Warm up WebKit layout engine (double-call workaround for Safari iOS)
         await toJpeg(capture.node, buildExportImageOptions(capture.node));
         // Real capture
-        return await toJpeg(capture.node, buildExportImageOptions(capture.node));
+        dataUrl = await toJpeg(capture.node, buildExportImageOptions(capture.node));
       } finally {
         capture.cleanup();
       }
-    });
-    const fileName = `kmitl-nova-${active}.jpg`;
-    const [header, base64] = dataUrl.split(',');
-    const mime = header.match(/:(.*?);/)?.[1] ?? 'image/jpeg';
-    const binary = atob(base64);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-    const blob = new Blob([bytes], { type: mime });
 
-    // Chrome/Edge: use Save As dialog with correct filename
-    if ('showSaveFilePicker' in window) {
-      try {
-        const handle = await (window as any).showSaveFilePicker({
-          suggestedName: fileName,
-          types: [{ description: 'JPEG Image', accept: { 'image/jpeg': ['.jpg'] } }],
-        });
-        const writable = await handle.createWritable();
-        await writable.write(blob);
-        await writable.close();
+      const fileName = `kmitl-nova-${active}.jpg`;
+      const [header, base64] = dataUrl.split(',');
+      const mime = header.match(/:(.*?);/)?.[1] ?? 'image/jpeg';
+      const binary = atob(base64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      const blob = new Blob([bytes], { type: mime });
+
+      // Chrome/Edge: use Save As dialog with correct filename
+      if ('showSaveFilePicker' in window) {
+        try {
+          const handle = await (window as any).showSaveFilePicker({
+            suggestedName: fileName,
+            types: [{ description: 'JPEG Image', accept: { 'image/jpeg': ['.jpg'] } }],
+          });
+          const writable = await handle.createWritable();
+          await writable.write(blob);
+          await writable.close();
+          return;
+        } catch { /* user cancelled, do nothing */ }
         return;
-      } catch { /* user cancelled, do nothing */ }
-      return;
-    }
+      }
 
-    // Safari/Firefox/Brave: anchor download works fine
-    const blobUrl = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = blobUrl;
-    link.download = fileName;
-    link.style.display = 'none';
-    document.body.appendChild(link);
-    link.click();
-    setTimeout(() => {
-      document.body.removeChild(link);
-      URL.revokeObjectURL(blobUrl);
-    }, 10000);
+      // Safari/Firefox/Brave: anchor download works fine
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = fileName;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(blobUrl);
+      }, 10000);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsExporting(false);
+    }
   }
 
   function handleSelectionChange(next: Partial<ReportParams>) {
@@ -212,6 +224,7 @@ export default function App() {
       onExamKindChange={(value) => handleSelectionChange({ examKind: value })}
       onExport={() => void handleExport()}
       onLogout={() => void handleLogout()}
+      isExporting={isExporting}
     >
       <div ref={exportRef}>
         {loading && !activeReport ? (

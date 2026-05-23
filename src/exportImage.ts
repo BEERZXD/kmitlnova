@@ -1,11 +1,7 @@
 const EXTRA_HORIZONTAL_CAPTURE_PADDING = 32;
 export const EXPORT_DESKTOP_CLASS = 'export-desktop';
 
-async function waitForNextFrame() {
-  await new Promise<void>((resolve) => {
-    window.requestAnimationFrame(() => resolve());
-  });
-}
+
 
 export function buildExportImageOptions(node: HTMLElement) {
   return {
@@ -33,8 +29,8 @@ export function createCenteredExportNode(source: HTMLElement) {
   Object.assign(wrapper.style, {
     position: 'absolute',
     top: '0',
-    left: '0',
-    zIndex: '-1',
+    left: '-9999px',
+    zIndex: '-9999',
     width: `${canvasWidth}px`,
     margin: '0',
     padding: '0',
@@ -74,16 +70,4 @@ export function createCenteredExportNode(source: HTMLElement) {
   };
 }
 
-export async function withDesktopExportLayout<T>(
-  node: HTMLElement,
-  capture: () => Promise<T>,
-  waitForStyles: () => Promise<void> = waitForNextFrame,
-) {
-  node.classList.add(EXPORT_DESKTOP_CLASS);
-  try {
-    await waitForStyles();
-    return await capture();
-  } finally {
-    node.classList.remove(EXPORT_DESKTOP_CLASS);
-  }
-}
+
