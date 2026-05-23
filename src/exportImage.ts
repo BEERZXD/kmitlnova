@@ -25,8 +25,10 @@ export function createCenteredExportNode(source: HTMLElement) {
   const container = document.createElement('div');
   const wrapper = document.createElement('div');
   const clone = source.cloneNode(true) as HTMLElement;
-  const canvasWidth = Math.ceil(source.scrollWidth + EXTRA_HORIZONTAL_CAPTURE_PADDING * 2);
-  const reportWidth = Math.ceil(source.scrollWidth);
+  
+  // Set explicit desktop export dimensions instead of reading mobile viewport scrollWidth
+  const reportWidth = 1400;
+  const canvasWidth = reportWidth + EXTRA_HORIZONTAL_CAPTURE_PADDING * 2; // 1464
 
   // Bounding box container to prevent scroll stretching
   Object.assign(container.style, {
