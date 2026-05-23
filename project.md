@@ -48,6 +48,7 @@ This project is related to `D:\Project\kmitlpromax`, the Chrome extension that m
 - In production/preview mode, `server/index.js` serves files from `dist/`.
 - If `dist/` does not exist, the backend returns a JSON message saying to start Vite or build the frontend.
 - On Vercel, `/api/:path*` explicitly rewrites to `api/[...path].js` and all non-API routes rewrite to the built SPA `index.html`.
+- Vercel serverless functions deploy to Singapore (`sin1`) region for low latency to KMITL registrar servers in Thailand.
 
 ## Main Files
 - `src/App.tsx`: top-level app state, login/logout, selected report, selector handling, lazy report loading, export handling.
@@ -423,11 +424,13 @@ Important mapper behavior:
 - App name: `KMITL Nova`.
 - Official KMITL logo URL: `https://www.kmitl.ac.th/themes/custom/kmitl/logo.svg`.
 - Login subtitle: `ระบบดึงข้อมูลการเรียน สจล.`
+- Login credential note: `ไม่มีการบันทึกรหัสผ่านลงไฟล์หรือฐานข้อมูลใดๆ` (centered).
 - Authenticated header subtitle: `ดูตารางเรียน ตารางสอบ และผลการเรียน สจล. ได้ง่ายๆ!`
+- No startup loading screen. The app shows the login page immediately. A background session check still runs so local dev auto-logs in if a session exists.
 - Loading states are Thai-first:
-  - Startup: `กำลังเริ่ม KMITL Nova` / `กำลังตรวจสอบเซสชันในเครื่อง`
   - Report loading: `กำลังโหลดข้อมูลทะเบียน` / `กำลังดึงข้อมูลจาก KMITL`
   - Login submit: `กำลังเข้าสู่ระบบ...`
+- Favicon uses the official KMITL logo SVG from `https://www.kmitl.ac.th/themes/custom/kmitl/logo.svg`.
 - Shared footer:
   - Text: `MADE WITH ❤️ BY _BXXR.T`
   - `_BXXR.T` links to `https://www.instagram.com/_bxxr.t/`
@@ -464,8 +467,11 @@ Behavior:
 - Adds balanced left and right capture padding by cloning the unchanged desktop report into a temporary wider capture canvas.
 - Preserves original report width and internal padding.
 - Temporarily applies the `export-desktop` class while capturing so responsive mobile/tablet styles do not affect the downloaded image.
+- Export-desktop mode sets `overflow: visible` on grade/summary containers to prevent scrollbar bleed in the captured image.
 - Prevents side clipping of title/table borders and shadows while keeping blank space even on both sides.
 - Export does not include the app header, selectors, footer, logout button, or export button.
+- On Chrome/Edge, uses `showSaveFilePicker` for a proper Save As dialog with the correct filename. Other browsers (Safari, Firefox, Brave) use a blob URL anchor download.
+- The JPEG data URL is converted to a blob via manual base64 decoding to avoid CSP `connect-src` restrictions on `fetch(dataUrl)`.
 
 ## Security Notes
 - Do not log user passwords.
