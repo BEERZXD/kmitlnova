@@ -238,7 +238,6 @@ button:disabled {
   margin-bottom: 14px;
   border-bottom: 1px solid var(--border);
   overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
   scrollbar-gutter: stable;
 }
 
@@ -314,7 +313,6 @@ button:disabled {
 .kpm-scroll-surface {
   width: 100%;
   overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
 }
 
 .kpm-info-card {
@@ -587,7 +585,6 @@ button:disabled {
   border: 1px solid var(--border);
   border-radius: 14px;
   overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
   box-shadow: 0 4px 6px -1px rgba(0,0,0,0.04);
   margin-bottom: 24px;
 }
@@ -1064,7 +1061,6 @@ button:disabled {
 
 .export-target.export-desktop * {
   scrollbar-width: none;
-  -webkit-overflow-scrolling: auto;
 }
 
 .export-target.export-desktop *::-webkit-scrollbar {

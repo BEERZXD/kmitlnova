@@ -131,6 +131,9 @@ export default function App() {
     const dataUrl = await withDesktopExportLayout(node, async () => {
       const capture = createCenteredExportNode(node);
       try {
+        // Warm up WebKit layout engine (double-call workaround for Safari iOS)
+        await toJpeg(capture.node, buildExportImageOptions(capture.node));
+        // Real capture
         return await toJpeg(capture.node, buildExportImageOptions(capture.node));
       } finally {
         capture.cleanup();
