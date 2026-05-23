@@ -786,7 +786,7 @@ button:disabled {
   }
 
   .brand-lockup {
-    align-items: flex-start;
+    align-items: center;
     gap: 12px;
   }
 
