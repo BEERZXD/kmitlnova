@@ -466,7 +466,8 @@ Behavior:
 - Captures full rendered report width/height.
 - Adds balanced left and right capture padding by cloning the unchanged desktop report into a temporary wider capture canvas.
 - Preserves original report width and internal padding.
-- Temporarily applies the `export-desktop` class while capturing so responsive mobile/tablet styles do not affect the downloaded image.
+- Clones the target DOM node first, positions it completely off-screen (`left: -9999px`), and applies the `export-desktop` style rules only to the clone. This completely avoids modifying the visible, live document, guaranteeing 100% glitch-free and visual-shift-free screen capturing.
+- While exporting is active, the Export button is disabled and its text changes to `Exporting...` to prevent double-triggering.
 - Export-desktop mode sets `overflow: visible` on grade/summary containers to prevent scrollbar bleed in the captured image.
 - Uses a solid white (`#ffffff`) background for the export wrapper and options to guarantee WebKit encodes any off-screen bounds beautifully.
 - Completely removed deprecated `-webkit-overflow-scrolling: touch` rules from stylesheets to prevent WebKit from creating detached hardware-accelerated scroll layers.
