@@ -136,10 +136,16 @@ export default function App() {
         capture.cleanup();
       }
     });
+    const res = await fetch(dataUrl);
+    const blob = await res.blob();
+    const blobUrl = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.download = `kmitl-nova-${active}.jpg`;
-    link.href = dataUrl;
+    link.href = blobUrl;
+    document.body.appendChild(link);
     link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(blobUrl);
   }
 
   function handleSelectionChange(next: Partial<ReportParams>) {
