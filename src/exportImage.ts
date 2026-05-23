@@ -10,7 +10,7 @@ async function waitForNextFrame() {
 export function buildExportImageOptions(node: HTMLElement) {
   return {
     quality: 0.96,
-    backgroundColor: '#f8f9fb',
+    backgroundColor: '#ffffff',
     pixelRatio: 2,
     width: Math.ceil(node.scrollWidth),
     height: Math.ceil(node.scrollHeight),
@@ -38,7 +38,7 @@ export function createCenteredExportNode(source: HTMLElement) {
     width: `${canvasWidth}px`,
     margin: '0',
     padding: '0',
-    background: '#f8f9fb',
+    background: '#ffffff',
     overflow: 'hidden',
     pointerEvents: 'none',
     boxSizing: 'border-box',
