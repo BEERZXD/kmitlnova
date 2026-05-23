@@ -143,19 +143,34 @@ export default function App() {
     const bytes = new Uint8Array(binary.length);
     for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
     const blob = new Blob([bytes], { type: mime });
+
+    // Chrome/Edge: use Save As dialog with correct filename
+    if ('showSaveFilePicker' in window) {
+      try {
+        const handle = await (window as any).showSaveFilePicker({
+          suggestedName: fileName,
+          types: [{ description: 'JPEG Image', accept: { 'image/jpeg': ['.jpg'] } }],
+        });
+        const writable = await handle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+        return;
+      } catch { /* user cancelled, do nothing */ }
+      return;
+    }
+
+    // Safari/Firefox/Brave: anchor download works fine
     const blobUrl = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = blobUrl;
     link.download = fileName;
     link.style.display = 'none';
     document.body.appendChild(link);
-    requestAnimationFrame(() => {
-      link.click();
-      setTimeout(() => {
-        document.body.removeChild(link);
-        URL.revokeObjectURL(blobUrl);
-      }, 10000);
-    });
+    link.click();
+    setTimeout(() => {
+      document.body.removeChild(link);
+      URL.revokeObjectURL(blobUrl);
+    }, 10000);
   }
 
   function handleSelectionChange(next: Partial<ReportParams>) {
