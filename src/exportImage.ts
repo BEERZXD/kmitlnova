@@ -53,18 +53,20 @@ export function createCenteredExportNode(source: HTMLElement) {
     transform: 'none',
   });
 
-  // Force-reset overflow on all descendants to prevent Safari iOS scrollbar bleed
-  clone.querySelectorAll('*').forEach((el) => {
-    const style = window.getComputedStyle(el);
-    if (style.overflowX === 'auto' || style.overflowX === 'scroll' ||
-        style.overflowY === 'auto' || style.overflowY === 'scroll') {
-      (el as HTMLElement).style.overflow = 'visible';
-      (el as HTMLElement).style.setProperty('-webkit-overflow-scrolling', 'auto');
-    }
-  });
-
   wrapper.appendChild(clone);
   document.body.appendChild(wrapper);
+
+  // Force-reset overflow on all scrollable descendants after DOM insertion
+  // so getComputedStyle returns real values
+  clone.querySelectorAll('*').forEach((el) => {
+    const htmlEl = el as HTMLElement;
+    const style = window.getComputedStyle(htmlEl);
+    if (style.overflowX === 'auto' || style.overflowX === 'scroll' ||
+        style.overflowY === 'auto' || style.overflowY === 'scroll') {
+      htmlEl.style.overflow = 'visible';
+      htmlEl.style.setProperty('-webkit-overflow-scrolling', 'auto');
+    }
+  });
 
   return {
     node: wrapper,
