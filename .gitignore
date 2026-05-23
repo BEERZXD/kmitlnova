@@ -2,9 +2,9 @@ node_modules/
 dist/
 .codex/
 artifacts/
+docs/
 .chrome*/
 .env
 .env.*
 *.log
-
 .vercel
