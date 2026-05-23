@@ -26,6 +26,7 @@ type AppShellProps = {
   onExamKindChange: (value: string) => void;
   onExport: () => void;
   onLogout: () => void;
+  isExporting?: boolean;
   children: ReactNode;
 };
 
@@ -71,6 +72,7 @@ export function AppShell({
   onExamKindChange,
   onExport,
   onLogout,
+  isExporting = false,
   children,
 }: AppShellProps) {
   return (
@@ -113,9 +115,9 @@ export function AppShell({
           ) : null}
         </div>
         <div className="actions">
-          <button className="icon-text-button" type="button" onClick={onExport} disabled={isLoading} title="Export image">
+          <button className="icon-text-button" type="button" onClick={onExport} disabled={isLoading || isExporting} title="Export image">
             <Download size={18} />
-            Export image
+            {isExporting ? 'Exporting...' : 'Export image'}
           </button>
         </div>
       </section>
