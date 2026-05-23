@@ -143,22 +143,12 @@ export default function App() {
     const bytes = new Uint8Array(binary.length);
     for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
     const blob = new Blob([bytes], { type: mime });
-
-    // Try native share on mobile (Safari/Chrome mobile)
-    if (navigator.share && navigator.canShare?.({ files: [new File([blob], fileName, { type: mime })] })) {
-      try {
-        await navigator.share({ files: [new File([blob], fileName, { type: mime })] });
-        return;
-      } catch { /* user cancelled or unsupported, fall through */ }
-    }
-
     const blobUrl = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = blobUrl;
     link.download = fileName;
     link.style.display = 'none';
     document.body.appendChild(link);
-    // Give browser a frame to register the element before clicking
     requestAnimationFrame(() => {
       link.click();
       setTimeout(() => {
