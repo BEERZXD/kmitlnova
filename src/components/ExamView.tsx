@@ -52,7 +52,7 @@ export function ExamView({ report }: { report: ExamReport }) {
             className="kpm-grid kpm-exam-grid"
             style={{
               gridTemplateColumns: `120px repeat(${totalSlots}, 1fr)`,
-              gridTemplateRows: `auto repeat(${dates.length}, 1fr)`,
+              gridTemplateRows: `auto repeat(${dates.length}, auto)`,
             }}
           >
           <div className="kpm-corner" />
