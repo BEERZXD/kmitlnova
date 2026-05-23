@@ -188,6 +188,23 @@ button:disabled {
   text-align: center;
 }
 
+.footer-socials {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 10px;
+}
+
+.footer-socials a {
+  color: var(--text-1);
+  text-decoration: none;
+  transition: opacity 0.15s ease;
+}
+
+.footer-socials a:hover {
+  opacity: 0.6;
+}
+
 .app-footer a {
   color: var(--accent);
   text-decoration: none;
