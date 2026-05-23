@@ -466,7 +466,7 @@ Behavior:
 - Captures full rendered report width/height.
 - Adds balanced left and right capture padding by cloning the unchanged desktop report into a temporary wider capture canvas.
 - Preserves original report width and internal padding.
-- Clones the target DOM node first, positions it using `position: fixed` inside the viewport with `opacity: 0.01` and `z-index: -9999`, and applies `export-desktop` style rules only to this clone. This forces Safari/WebKit to fully lay out and paint the element (avoiding blank output), while keeping it completely invisible and preventing any layout-shifting visual glitch.
+- Clones the target DOM node first, wraps it inside a `1px` by `1px` absolute-positioned offscreen container (`overflow: hidden; z-index: -9999`), and positions the inner wrapper using `position: absolute` with the full `canvasWidth` (1400px+). This guarantees Safari/WebKit lays out responsive components (like the title card) at their true full desktop width instead of squishing them to the 390px mobile viewport, while completely preventing document body stretching, visual glitches, or blank outputs.
 - Overrides `opacity: 1` in `toJpeg` options style parameter so the exported file is fully solid.
 - While exporting is active, the Export button is disabled and its text changes to `Exporting...` to prevent double-triggering.
 - Export-desktop mode sets `overflow: visible` on grade/summary containers to prevent scrollbar bleed in the captured image.
