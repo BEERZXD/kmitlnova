@@ -1059,6 +1059,13 @@ button:disabled {
   overflow: visible;
 }
 
+.export-target.export-desktop .kpm-grid,
+.export-target.export-desktop .kpm-info-card,
+.export-target.export-desktop .kpm-grade-container,
+.export-target.export-desktop .kpm-summary-container {
+  box-shadow: none !important;
+}
+
 .export-target.export-desktop * {
   scrollbar-width: none;
 }
