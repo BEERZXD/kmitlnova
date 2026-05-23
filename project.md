@@ -46,7 +46,7 @@ This project is related to `D:\Project\kmitlpromax`, the Chrome extension that m
 - The backend binds to `127.0.0.1`, not a public interface.
 - In production/preview mode, `server/index.js` serves files from `dist/`.
 - If `dist/` does not exist, the backend returns a JSON message saying to start Vite or build the frontend.
-- On Vercel, `/api/:path*` is handled by `api/[...path].js` and all non-API routes rewrite to the built SPA `index.html`.
+- On Vercel, `/api/:path*` explicitly rewrites to `api/[...path].js` and all non-API routes rewrite to the built SPA `index.html`.
 
 ## Main Files
 - `src/App.tsx`: top-level app state, login/logout, selected report, selector handling, lazy report loading, export handling.
