@@ -1062,9 +1062,17 @@ button:disabled {
   overflow: visible;
 }
 
+.export-target.export-desktop * {
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: auto;
+}
+
+.export-target.export-desktop *::-webkit-scrollbar {
+  display: none;
+}
+
 .export-target.export-desktop .kpm-scroll-surface {
   overflow: visible;
-  -webkit-overflow-scrolling: auto;
 }
 
 .export-target.export-desktop .kpm-info-card {
@@ -1155,7 +1163,6 @@ button:disabled {
   border-radius: 14px;
   margin-bottom: 24px;
   overflow: visible;
-  -webkit-overflow-scrolling: auto;
 }
 
 .export-target.export-desktop .kpm-grade-table {
