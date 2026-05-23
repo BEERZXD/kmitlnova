@@ -468,6 +468,9 @@ Behavior:
 - Preserves original report width and internal padding.
 - Temporarily applies the `export-desktop` class while capturing so responsive mobile/tablet styles do not affect the downloaded image.
 - Export-desktop mode sets `overflow: visible` on grade/summary containers to prevent scrollbar bleed in the captured image.
+- Uses a solid white (`#ffffff`) background for the export wrapper and options to guarantee WebKit encodes any off-screen bounds beautifully.
+- Completely removed deprecated `-webkit-overflow-scrolling: touch` rules from stylesheets to prevent WebKit from creating detached hardware-accelerated scroll layers.
+- Uses a "double-call" workaround on `toJpeg()` in `handleExport` to trigger layout and paint passes in the WebKit rendering engine before retrieving the final image.
 - Prevents side clipping of title/table borders and shadows while keeping blank space even on both sides.
 - Export does not include the app header, selectors, footer, logout button, or export button.
 - On Chrome/Edge, uses `showSaveFilePicker` for a proper Save As dialog with the correct filename. Other browsers (Safari, Firefox, Brave) use a blob URL anchor download.
