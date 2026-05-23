@@ -68,7 +68,7 @@ export function LoginView({ error, isLoading, onSubmit }: LoginViewProps) {
         </form>
 
         <p className="credential-note">
-          Credentials stay in memory inside the local backend process and are cleared on logout or restart.
+          ไม่มีการบันทึกรหัสผ่านลงไฟล์หรือฐานข้อมูลใดๆ
         </p>
       </section>
       <AppFooter />
