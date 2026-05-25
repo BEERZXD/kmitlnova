@@ -35,18 +35,20 @@ function SelectControl({
   value,
   options,
   onChange,
+  disabled,
 }: {
   label: string;
   value: string;
   options: ApiOption[];
   onChange: (value: string) => void;
+  disabled?: boolean;
 }) {
   if (!options.length) return null;
 
   return (
-    <label className="select-control">
+    <label className={`select-control${disabled ? ' select-control-loading' : ''}`}>
       <span>{label}</span>
-      <select value={value} onChange={(event) => onChange(event.target.value)}>
+      <select value={value} onChange={(event) => onChange(event.target.value)} disabled={disabled}>
         {options.map((option) => (
           <option key={`${label}-${option.value}`} value={option.value}>
             {option.label}
@@ -108,10 +110,10 @@ export function AppShell({
 
       <section className="actionbar">
         <div className="selectors">
-          <SelectControl label="Semester" value={selectedSemester} options={semesterOptions} onChange={onSemesterChange} />
-          <SelectControl label="Year" value={selectedYear} options={yearOptions} onChange={onYearChange} />
+          <SelectControl label="Semester" value={selectedSemester} options={semesterOptions} onChange={onSemesterChange} disabled={isLoading} />
+          <SelectControl label="Year" value={selectedYear} options={yearOptions} onChange={onYearChange} disabled={isLoading} />
           {active === 'exam' ? (
-            <SelectControl label="Exam" value={selectedExamKind} options={examKindOptions} onChange={onExamKindChange} />
+            <SelectControl label="Exam" value={selectedExamKind} options={examKindOptions} onChange={onExamKindChange} disabled={isLoading} />
           ) : null}
         </div>
         <div className="actions">

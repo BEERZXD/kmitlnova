@@ -89,9 +89,11 @@ type LoginViewProps = {
   error: string;
   isLoading: boolean;
   onSubmit: (studentId: string, password: string) => Promise<void>;
+  onSuccess: () => void;
 };
 
-export function LoginView({ error, isLoading, onSubmit }: LoginViewProps) {
+export function LoginView({ error, isLoading, onSubmit, onSuccess }: LoginViewProps) {
+  const [isAnimating, setIsAnimating] = useState(false);
   const [studentId, setStudentId] = useState('');
   const [password, setPassword] = useState('');
   const [loginImages, setLoginImages] = useState(fallbackLoginImages);
@@ -158,8 +160,16 @@ export function LoginView({ error, isLoading, onSubmit }: LoginViewProps) {
   }, [loginImages.length]);
 
   async function submitLogin() {
-    if (isLoading) return;
-    await onSubmit(studentId.trim(), password);
+    if (isLoading || isAnimating) return;
+    try {
+      await onSubmit(studentId.trim(), password);
+      setIsAnimating(true);
+      setTimeout(() => {
+        onSuccess();
+      }, 400); // 0.4s clean fade duration
+    } catch {
+      // App.tsx handles error state
+    }
   }
 
   async function handleSubmit(event: FormEvent) {
@@ -181,7 +191,7 @@ export function LoginView({ error, isLoading, onSubmit }: LoginViewProps) {
   );
 
   return (
-    <main className="login-page">
+    <main className={`login-page${isAnimating ? ' professional-animating' : ''}`}>
       <div className="login-layout">
         <section className="login-visual" aria-hidden="true">
           {renderedLoginImageIndexes.map((imageIndex) => {
