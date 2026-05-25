@@ -82,13 +82,13 @@ export function AppShell({
           <img className="brand-mark" src={kmitlLogoUrl} alt="KMITL logo" />
           <div>
             <h1>KMITL Nova</h1>
-            <p>ดูตารางเรียน ตารางสอบ และผลการเรียน สจล. ได้ง่ายๆ!</p>
+            <p>ระบบดึงข้อมูลการเรียน สจล.</p>
           </div>
         </div>
 
-        <button className="icon-text-button" type="button" onClick={onLogout}>
+        <button className="icon-text-button logout-button" type="button" onClick={onLogout} aria-label="Logout" title="Logout">
           <LogOut size={18} />
-          Logout
+          <span className="logout-label">Logout</span>
         </button>
       </header>
 

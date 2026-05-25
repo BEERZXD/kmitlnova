@@ -5,8 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "concurrently \"node server/index.js\" \"vite --host 127.0.0.1\"",
+    "dev:lan": "concurrently \"node server/index.js --host 0.0.0.0\" \"vite --host 0.0.0.0\"",
     "build": "vite build",
     "preview": "node server/index.js",
+    "preview:lan": "node server/index.js --host 0.0.0.0",
     "test": "vitest run"
   },
   "dependencies": {
