@@ -8,7 +8,7 @@ const kmitlLogoUrl = 'https://www.kmitl.ac.th/themes/custom/kmitl/logo.svg';
 const tabs: Array<{ type: ReportType; label: string; sublabel: string }> = [
   { type: 'study', label: 'ตารางเรียน', sublabel: 'Study timetable' },
   { type: 'exam', label: 'ตารางสอบ', sublabel: 'Exam timetable' },
-  { type: 'grade', label: 'ผลการเรียน', sublabel: 'Grade result' },
+  { type: 'grade', label: 'ผลการเรียน', sublabel: 'Grade table' },
 ];
 
 type AppShellProps = {
