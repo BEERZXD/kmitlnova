@@ -92,3 +92,7 @@ vercel.json           Vercel deployment configuration
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
+
+## Repository Notes
+
+`project.md` is treated as local workspace documentation and is intentionally ignored by Git and Vercel uploads because it is not required to build, deploy, or run the live app.

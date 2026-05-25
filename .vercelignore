@@ -4,6 +4,7 @@ dist/
 .codex/
 .vercel/
 artifacts/
+project.md
 .chrome*/
 .env
 .env.*

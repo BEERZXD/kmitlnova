@@ -3,6 +3,7 @@ dist/
 .codex/
 artifacts/
 docs/
+project.md
 .chrome*/
 .env
 .env.*
