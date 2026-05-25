@@ -5,8 +5,9 @@ import { LoginView } from './components/LoginView';
 import { buildExportImageOptions, createCenteredExportNode } from './exportImage';
 import type { ApiOption, ReportData, ReportParams, ReportType } from './types';
 
+import { AppShell } from './components/AppShell';
+
 const initialTab: ReportType = 'study';
-const AppShell = lazy(() => import('./components/AppShell').then((module) => ({ default: module.AppShell })));
 const StudyView = lazy(() => import('./components/StudyView').then((module) => ({ default: module.StudyView })));
 const ExamView = lazy(() => import('./components/ExamView').then((module) => ({ default: module.ExamView })));
 const GradeView = lazy(() => import('./components/GradeView').then((module) => ({ default: module.GradeView })));
@@ -185,13 +186,10 @@ export default function App() {
 
   function handleTabChange(type: ReportType) {
     if (type === active) return;
+    setLoading(true);
     setActive(type);
     setError('');
-    setSelectedSemester('');
-    setSelectedYear('');
     if (type !== 'exam') setSelectedExamKind('');
-    setSavedSemesterOptions([]);
-    setSavedYearOptions([]);
     if (type !== 'exam') setSavedExamKindOptions([]);
     setReports((current) => clearReportForTab(current, type));
   }
@@ -201,7 +199,7 @@ export default function App() {
     setLoading(true);
     try {
       await loginRequest(studentId, password);
-      setLoggedIn(true);
+      // Wait for LoginView to play its animation before setting loggedIn(true)
       setActive(initialTab);
       setReports({});
       setTitleIdentity(null);
@@ -210,9 +208,14 @@ export default function App() {
       setSavedExamKindOptions([]);
     } catch (loginErrorValue) {
       setLoginError(loginErrorValue instanceof Error ? loginErrorValue.message : 'Login failed.');
+      throw loginErrorValue;
     } finally {
       setLoading(false);
     }
+  }
+
+  function handleLoginAnimationComplete() {
+    setLoggedIn(true);
   }
 
   async function handleLogout() {
@@ -298,25 +301,30 @@ export default function App() {
       examKind: selectedExamKind,
     }, next);
 
+    setLoading(true);
+    setError('');
     if (next.semester !== undefined || resetSemesterOptions) setSelectedSemester(nextSelected.semester);
     if (next.year !== undefined) setSelectedYear(nextSelected.year);
     if (next.examKind !== undefined) setSelectedExamKind(nextSelected.examKind);
     if (resetSemesterOptions) setSavedSemesterOptions([]);
-    setReports((current) => titleIdentity
-      ? applyTitleIdentityToReports({ ...current, study: undefined, exam: undefined, grade: undefined }, titleIdentity)
-      : { ...current, study: undefined, exam: undefined, grade: undefined });
+    // Keep the active report visible during loading (overlay dims it).
+    // Clear only non-active tabs so they reload with the new semester/year.
+    setReports((current) => {
+      const kept = { ...current };
+      for (const key of Object.keys(kept) as ReportType[]) {
+        if (key !== active) kept[key] = undefined;
+      }
+      return titleIdentity ? applyTitleIdentityToReports(kept, titleIdentity) : kept;
+    });
     void loadReport(active, true, reportParams);
   }
 
-
-
   if (!loggedIn) {
-    return <LoginView error={loginError} isLoading={loading} onSubmit={handleLogin} />;
+    return <LoginView error={loginError} isLoading={loading} onSubmit={handleLogin} onSuccess={handleLoginAnimationComplete} />;
   }
 
   return (
-    <Suspense fallback={<EmptyState state="loading" title="กำลังโหลดข้อมูลทะเบียน" detail="กำลังดึงข้อมูลจาก KMITL" />}>
-      <AppShell
+    <AppShell
       active={active}
       isLoading={loading}
       semesterOptions={semesterOptions}
@@ -332,23 +340,31 @@ export default function App() {
       onExport={() => void handleExport()}
       onLogout={() => void handleLogout()}
       isExporting={isExporting}
-      >
-        <div ref={exportRef}>
-        {loading && !activeReport ? (
-          <EmptyState state="loading" title="กำลังโหลดข้อมูลทะเบียน" detail="กำลังดึงข้อมูลจาก KMITL" />
-        ) : error ? (
-          <EmptyState state="error" title="โหลดข้อมูลไม่สำเร็จ" detail={error} onRetry={() => void loadReport(active, true, params)} />
-        ) : activeReport?.type === 'study' ? (
-          <StudyView report={activeReport} />
-        ) : activeReport?.type === 'exam' ? (
-          <ExamView report={activeReport} />
-        ) : activeReport?.type === 'grade' ? (
-          <GradeView report={activeReport} />
-        ) : (
-          <EmptyState state="empty" title="ข้อมูลยังไม่ถูกโหลด" detail="เลือกรายการที่ต้องการเพื่อโหลดข้อมูล" />
-        )}
+    >
+      <Suspense fallback={<EmptyState state="loading" title="กำลังโหลดข้อมูลทะเบียน" detail="กำลังโหลดส่วนติดต่อผู้ใช้" />}>
+        <div ref={exportRef} className={`report-content-area${loading ? ' report-content-loading' : ''}`}>
+          {loading && !activeReport ? (
+            <EmptyState state="loading" title="กำลังโหลดข้อมูลทะเบียน" detail="กำลังดึงข้อมูลจาก KMITL" />
+          ) : error && !activeReport ? (
+            <EmptyState state="error" title="โหลดข้อมูลไม่สำเร็จ" detail={error} onRetry={() => void loadReport(active, true, params)} />
+          ) : activeReport?.type === 'study' ? (
+            <StudyView report={activeReport} />
+          ) : activeReport?.type === 'exam' ? (
+            <ExamView report={activeReport} />
+          ) : activeReport?.type === 'grade' ? (
+            <GradeView report={activeReport} />
+          ) : (
+            <EmptyState state="empty" title="ข้อมูลยังไม่ถูกโหลด" detail="เลือกรายการที่ต้องการเพื่อโหลดข้อมูล" />
+          )}
+          {loading && activeReport ? <div className="report-loading-overlay" /> : null}
+          {error && activeReport ? (
+            <div className="report-error-banner">
+              <span>{error}</span>
+              <button type="button" className="secondary-button" onClick={() => void loadReport(active, true, params)}>ลองอีกครั้ง</button>
+            </div>
+          ) : null}
         </div>
-      </AppShell>
-    </Suspense>
+      </Suspense>
+    </AppShell>
   );
 }
