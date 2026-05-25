@@ -81,7 +81,7 @@ describe('report display helpers', () => {
       department: 'สาขาวิชา วิศวกรรมแปรรูปอาหาร',
       raw: '',
     })).toMatchObject({
-      faculty: 'คณะอุตสาหกรรมอาหาร',
+      faculty: 'คณะ อุตสาหกรรมอาหาร',
       department: 'สาขาวิชา วิศวกรรมแปรรูปอาหาร',
     });
   });

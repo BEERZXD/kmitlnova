@@ -1,7 +1,7 @@
 import type { ApiOption, StudentInfo } from './types';
 
 export const UNIVERSITY_TH = 'สถาบันเทคโนโลยีพระจอมเกล้าเจ้าคุณทหารลาดกระบัง';
-const FACULTY_FOOD_TH = '\u0e04\u0e13\u0e30\u0e2d\u0e38\u0e15\u0e2a\u0e32\u0e2b\u0e01\u0e23\u0e23\u0e21\u0e2d\u0e32\u0e2b\u0e32\u0e23';
+const FACULTY_FOOD_TH = '\u0e04\u0e13\u0e30 \u0e2d\u0e38\u0e15\u0e2a\u0e32\u0e2b\u0e01\u0e23\u0e23\u0e21\u0e2d\u0e32\u0e2b\u0e32\u0e23';
 const FOOD_PROCESS_MAJOR_TH = '\u0e2a\u0e32\u0e02\u0e32\u0e27\u0e34\u0e0a\u0e32 \u0e27\u0e34\u0e28\u0e27\u0e01\u0e23\u0e23\u0e21\u0e41\u0e1b\u0e23\u0e23\u0e39\u0e1b\u0e2d\u0e32\u0e2b\u0e32\u0e23';
 
 export const subjectPalette = [
@@ -87,7 +87,10 @@ function titleCardUniversity(value?: string) {
 function titleCardFaculty(value?: string) {
   const text = String(value ?? '').trim();
   if (!/[\u0e00-\u0e7f]/.test(text)) return '';
-  return text.replace(/^คณะ\s+/, 'คณะ');
+  
+  const facultyMatch = text.match(/^คณะ\s*(.+)$/);
+  if (!facultyMatch) return text;
+  return `คณะ ${facultyMatch[1].trim()}`;
 }
 
 function titleCardDepartment(value?: string) {
