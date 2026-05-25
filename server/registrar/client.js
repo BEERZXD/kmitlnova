@@ -159,12 +159,27 @@ function hasLoginFailure(html) {
   return /invalid|incorrect|ผิด|ไม่ถูกต้อง|login failed|password/i.test(html);
 }
 
-function candidateAcademicYears(currentYear, requestedYear) {
-  const start = Number(currentYear) || new Date().getFullYear() + 543;
+function extractAdmissionYear(studentId) {
+  const match = String(studentId).match(/^(\d{2})/);
+  if (!match) return null;
+  return 2500 + Number(match[1]);
+}
+
+function candidateAcademicYears(currentYear, requestedYear, studentId) {
+  const current = Number(currentYear) || new Date().getFullYear() + 543;
   const values = new Set();
   if (requestedYear) values.add(String(requestedYear));
-  for (let index = 0; index < 8; index += 1) {
-    values.add(String(start - index));
+  
+  const admissionYear = studentId ? extractAdmissionYear(studentId) : null;
+  if (admissionYear) {
+    const endYear = Math.min(current, admissionYear + 7);
+    for (let year = admissionYear; year <= endYear; year += 1) {
+      values.add(String(year));
+    }
+  } else {
+    for (let index = 0; index < 8; index += 1) {
+      values.add(String(current - index));
+    }
   }
   return [...values].sort((a, b) => Number(b) - Number(a));
 }
@@ -415,14 +430,22 @@ export class RegistrarClient {
 
   async getStudentProfile() {
     if (this.studentProfile) return this.studentProfile;
-    let profileUrl = STUDENT_PROFILE_URL;
-    const home = await this.text(STUDENT_HOME_URL).catch(() => null);
-    const discoveredUrl = home ? extractStudentProfileUrl(home.body) : '';
-    if (discoveredUrl) {
-      profileUrl = new URL(discoveredUrl, STUDENT_HOME_URL).toString();
+    
+    let profileResponse = await this.text(STUDENT_PROFILE_URL).catch(() => null);
+    let profile = profileResponse ? parseStudentProfile(profileResponse.body) : {};
+    
+    if (!profile.faculty && !profile.department) {
+      const home = await this.text(STUDENT_HOME_URL).catch(() => null);
+      const discoveredUrl = home ? extractStudentProfileUrl(home.body) : '';
+      if (discoveredUrl) {
+        const profileUrl = new URL(discoveredUrl, STUDENT_HOME_URL).toString();
+        profileResponse = await this.text(profileUrl).catch(() => null);
+        if (profileResponse) {
+          profile = parseStudentProfile(profileResponse.body);
+        }
+      }
     }
-    const { body } = await this.text(profileUrl);
-    const profile = parseStudentProfile(body);
+
     if (!profile.faculty && !profile.department) {
       throw new Error('Registrar student profile did not include faculty or major.');
     }
@@ -431,11 +454,12 @@ export class RegistrarClient {
   }
 
   async getAvailableAcademicRows(currentYear, requestedYear) {
-    const cacheKey = `${currentYear}:${requestedYear ?? ''}`;
+    const studentId = this.userInfo?.payload?.ticket?.user_id || '';
+    const cacheKey = `${currentYear}:${requestedYear ?? ''}:${studentId}`;
     if (this.availableAcademicCache.has(cacheKey)) return this.availableAcademicCache.get(cacheKey);
 
     const rowsByYear = new Map();
-    await Promise.all(candidateAcademicYears(currentYear, requestedYear).map(async (year) => {
+    await Promise.all(candidateAcademicYears(currentYear, requestedYear, studentId).map(async (year) => {
       rowsByYear.set(year, await this.getRegistrationRowsBySemester(year));
     }));
 
