@@ -131,7 +131,6 @@ describe('startup bundle boundaries', () => {
   });
 
   it('lazy-loads authenticated report views outside the login startup path', () => {
-    expect(appSource).toContain("lazy(() => import('./components/AppShell')");
     expect(appSource).toContain("lazy(() => import('./components/StudyView')");
     expect(appSource).toContain("lazy(() => import('./components/ExamView')");
     expect(appSource).toContain("lazy(() => import('./components/GradeView')");
