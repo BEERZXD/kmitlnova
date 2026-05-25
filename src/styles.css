@@ -396,7 +396,6 @@ button:disabled {
 }
 
 .kpm-scroll-surface {
-  width: 100%;
   overflow-x: auto;
   padding: 4px;
   margin: -4px;
