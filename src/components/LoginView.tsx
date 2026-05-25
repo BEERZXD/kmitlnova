@@ -1,8 +1,61 @@
-import { FormEvent, useState } from 'react';
+import { FormEvent, KeyboardEvent, useEffect, useState } from 'react';
 import { LockKeyhole, LogIn, UserRound } from 'lucide-react';
 import { AppFooter } from './AppFooter';
 
 const kmitlLogoUrl = 'https://www.kmitl.ac.th/themes/custom/kmitl/logo.svg';
+const loginImageUrl = '/login-bg.jpg';
+const loginImagesConfigUrl = '/login-images.txt';
+const loginImageCycleMs = 5000;
+const defaultLoginImagePosition = '50% 50%';
+const fallbackLoginImages = [{ src: loginImageUrl, objectPosition: defaultLoginImagePosition }];
+
+type LoginImageEntry = {
+  src: string;
+  objectPosition: string;
+};
+
+function parseLoginImageLine(line: string): LoginImageEntry {
+  const separatorIndex = line.indexOf('|');
+
+  if (separatorIndex === -1) {
+    return {
+      src: line,
+      objectPosition: defaultLoginImagePosition,
+    };
+  }
+
+  const src = line.slice(0, separatorIndex).trim();
+  const objectPosition = line.slice(separatorIndex + 1).trim();
+
+  return {
+    src,
+    objectPosition: objectPosition || defaultLoginImagePosition,
+  };
+}
+
+export function parseLoginImageList(text: string) {
+  return text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0 && !line.startsWith('#'))
+    .map(parseLoginImageLine)
+    .filter((image) => image.src.length > 0);
+}
+
+export function getLoginImageClassName(
+  imageIndex: number,
+  activeLoginImageIndex: number,
+) {
+  if (imageIndex === activeLoginImageIndex) {
+    return 'login-visual-image active';
+  }
+
+  return 'login-visual-image inactive';
+}
+
+export function isLoginSubmitKey(event: Pick<KeyboardEvent, 'key' | 'shiftKey' | 'isComposing'>) {
+  return event.key === 'Enter' && !event.shiftKey && !event.isComposing;
+}
 
 type LoginViewProps = {
   error: string;
@@ -13,64 +66,125 @@ type LoginViewProps = {
 export function LoginView({ error, isLoading, onSubmit }: LoginViewProps) {
   const [studentId, setStudentId] = useState('');
   const [password, setPassword] = useState('');
+  const [loginImages, setLoginImages] = useState(fallbackLoginImages);
+  const [activeLoginImageIndex, setActiveLoginImageIndex] = useState(0);
+
+  useEffect(() => {
+    let isActive = true;
+
+    fetch(loginImagesConfigUrl, { cache: 'no-store' })
+      .then((response) => (response.ok ? response.text() : ''))
+      .then((text) => {
+        if (!isActive) return;
+        const configuredImages = parseLoginImageList(text);
+        setLoginImages(configuredImages.length > 0 ? configuredImages : fallbackLoginImages);
+        setActiveLoginImageIndex(0);
+      })
+      .catch(() => {
+        if (!isActive) return;
+        setLoginImages(fallbackLoginImages);
+        setActiveLoginImageIndex(0);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (loginImages.length < 2) return;
+
+    const intervalId = window.setInterval(() => {
+      setActiveLoginImageIndex((currentIndex) => (currentIndex + 1) % loginImages.length);
+    }, loginImageCycleMs);
+
+    return () => window.clearInterval(intervalId);
+  }, [loginImages.length]);
+
+  async function submitLogin() {
+    if (isLoading) return;
+    await onSubmit(studentId.trim(), password);
+  }
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    await onSubmit(studentId.trim(), password);
+    await submitLogin();
+  }
+
+  async function handleKeyDown(event: KeyboardEvent<HTMLFormElement>) {
+    if (!isLoginSubmitKey(event)) return;
+    event.preventDefault();
+    await submitLogin();
   }
 
   return (
     <main className="login-page">
-      <section className="login-panel" aria-labelledby="login-title">
-        <div className="brand-lockup">
-          <img className="brand-mark" src={kmitlLogoUrl} alt="KMITL logo" />
-          <div>
-            <h1 id="login-title">KMITL Nova</h1>
-            <p>ระบบดึงข้อมูลการเรียน สจล.</p>
+      <div className="login-layout">
+        <section className="login-visual" aria-hidden="true">
+          {loginImages.map((image, imageIndex) => (
+            <img
+              key={`${image.src}-${imageIndex}`}
+              className={getLoginImageClassName(imageIndex, activeLoginImageIndex)}
+              src={image.src}
+              style={{ objectPosition: image.objectPosition }}
+              alt=""
+            />
+          ))}
+        </section>
+
+        <section className="login-form-column">
+          <div className="login-panel" aria-labelledby="login-title">
+            <div className="brand-lockup">
+              <img className="brand-mark" src={kmitlLogoUrl} alt="KMITL logo" />
+              <div>
+                <h1 id="login-title">KMITL Nova</h1>
+                <p>ระบบดึงข้อมูลการเรียน สจล.</p>
+              </div>
+            </div>
+
+            <form className="login-form" onSubmit={handleSubmit} onKeyDown={(event) => void handleKeyDown(event)}>
+              <label>
+                <span>Student ID</span>
+                <div className="field">
+                  <UserRound size={18} />
+                  <input
+                    value={studentId}
+                    onChange={(event) => setStudentId(event.target.value)}
+                    autoComplete="username"
+                    inputMode="numeric"
+                    required
+                  />
+                </div>
+              </label>
+
+              <label>
+                <span>Password</span>
+                <div className="field">
+                  <LockKeyhole size={18} />
+                  <input
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    type="password"
+                    autoComplete="current-password"
+                    required
+                  />
+                </div>
+              </label>
+
+              {error ? <p className="form-error">{error}</p> : null}
+
+              <button className="primary-button" type="submit" disabled={isLoading}>
+                <LogIn size={18} />
+                {isLoading ? 'กำลังเข้าสู่ระบบ...' : 'Login'}
+              </button>
+            </form>
+
+            <p className="credential-note">
+              ไม่มีการบันทึกรหัสผ่านลงไฟล์หรือฐานข้อมูลใดๆ
+            </p>
           </div>
-        </div>
-
-        <form className="login-form" onSubmit={handleSubmit}>
-          <label>
-            <span>Student ID</span>
-            <div className="field">
-              <UserRound size={18} />
-              <input
-                value={studentId}
-                onChange={(event) => setStudentId(event.target.value)}
-                autoComplete="username"
-                inputMode="numeric"
-                required
-              />
-            </div>
-          </label>
-
-          <label>
-            <span>Password</span>
-            <div className="field">
-              <LockKeyhole size={18} />
-              <input
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                type="password"
-                autoComplete="current-password"
-                required
-              />
-            </div>
-          </label>
-
-          {error ? <p className="form-error">{error}</p> : null}
-
-          <button className="primary-button" type="submit" disabled={isLoading}>
-            <LogIn size={18} />
-            {isLoading ? 'กำลังเข้าสู่ระบบ...' : 'Login'}
-          </button>
-        </form>
-
-        <p className="credential-note">
-          ไม่มีการบันทึกรหัสผ่านลงไฟล์หรือฐานข้อมูลใดๆ
-        </p>
-      </section>
+        </section>
+      </div>
       <AppFooter />
     </main>
   );

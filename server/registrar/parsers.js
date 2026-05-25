@@ -28,11 +28,22 @@ const TH_MONTHS = {
 const TH_DAY_RE = 'จ\\.|อ\\.|พ\\.|พฤ\\.|ศ\\.|ส\\.|อา\\.|à¸ˆ\\.|à¸­\\.|à¸ž\\.|à¸žà¸¤\\.|à¸¨\\.|à¸ª\\.|à¸­à¸²\\.';
 const UNIVERSITY_TH = 'สถาบันเทคโนโลยีพระจอมเกล้าเจ้าคุณทหารลาดกระบัง';
 
+const FACULTY_FOOD_TH = '\u0e04\u0e13\u0e30\u0e2d\u0e38\u0e15\u0e2a\u0e32\u0e2b\u0e01\u0e23\u0e23\u0e21\u0e2d\u0e32\u0e2b\u0e32\u0e23';
+const EE_MAJOR_TH = '\u0e2a\u0e32\u0e02\u0e32\u0e27\u0e34\u0e0a\u0e32 \u0e27\u0e34\u0e28\u0e27\u0e01\u0e23\u0e23\u0e21\u0e44\u0e1f\u0e1f\u0e49\u0e32';
+const FOOD_PROCESS_MAJOR_TH = '\u0e2a\u0e32\u0e02\u0e32\u0e27\u0e34\u0e0a\u0e32 \u0e27\u0e34\u0e28\u0e27\u0e01\u0e23\u0e23\u0e21\u0e41\u0e1b\u0e23\u0e23\u0e39\u0e1b\u0e2d\u0e32\u0e2b\u0e32\u0e23';
+const TH_MAJOR_LABEL = '\u0e2a\u0e32\u0e02\u0e32\u0e27\u0e34\u0e0a\u0e32';
+const TH_FACULTY_LABEL = '\u0e04\u0e13\u0e30';
+const TH_DEPARTMENT_LABEL = '\u0e20\u0e32\u0e04\u0e27\u0e34\u0e0a\u0e32';
+
 const FACULTY_TRANSLATIONS = [
+  [/^Faculty of Food Industry$/i, FACULTY_FOOD_TH],
   [/^Faculty of Engineering$/i, 'คณะวิศวกรรมศาสตร์'],
 ];
 
 const DEPARTMENT_TRANSLATIONS = [
+  [/^Bachelor of Engineering Programme in Electrical Engineering$/i, EE_MAJOR_TH],
+  [/^Bachelor of Science Program(?:me)? in Food Process Engineering$/i, FOOD_PROCESS_MAJOR_TH],
+  [/Food Process Engineering/i, FOOD_PROCESS_MAJOR_TH],
   [/^Bachelor of Engineering Programme in Electrical Engineering$/i, 'ภาควิชา วิศวกรรมไฟฟ้า สาขาวิชา วิศวกรรมไฟฟ้า'],
 ];
 
@@ -146,13 +157,15 @@ function parseStudentInfo(html) {
     .replace(/\s*Semester\/Year\s*:.*$/i, '')
     .trim();
 
+  const normalizedDepartment = normalizeDepartment(department);
+
   return {
     id,
     name: thaiName || englishName,
     semester,
     university: normalizeUniversity(university),
-    faculty: normalizeFaculty(faculty),
-    department: normalizeDepartment(department),
+    faculty: normalizeFacultyForDepartment(faculty, normalizedDepartment),
+    department: normalizedDepartment,
     raw: text,
   };
 }
@@ -180,8 +193,84 @@ function normalizeFaculty(value) {
   return translateKnownValue(normalized, FACULTY_TRANSLATIONS);
 }
 
+function facultyFromDepartment(value) {
+  const normalized = normalizeText(value);
+  if (normalized === FOOD_PROCESS_MAJOR_TH || /Food Process Engineering/i.test(normalized)) return FACULTY_FOOD_TH;
+  return '';
+}
+
+function normalizeFacultyForDepartment(faculty, department) {
+  return facultyFromDepartment(department) || normalizeFaculty(faculty);
+}
+
+function majorOnly(value) {
+  const normalized = normalizeText(value);
+  const majorMatch = normalized.match(new RegExp(`${TH_MAJOR_LABEL}\\s*(.+)$`));
+  if (!majorMatch) return normalized;
+  return `${TH_MAJOR_LABEL} ${majorMatch[1].trim()}`;
+}
+
 function normalizeDepartment(value) {
-  return translateKnownValue(value, DEPARTMENT_TRANSLATIONS);
+  return majorOnly(translateKnownValue(value, DEPARTMENT_TRANSLATIONS));
+}
+
+function cleanProfileValue(value) {
+  return normalizeText(String(value ?? ''))
+    .replace(/^[-:：>\s]+/, '')
+    .trim();
+}
+
+function labelValueFromRows(html) {
+  const values = {};
+  for (const row of getRows(html)) {
+    const cells = dataCells(row);
+    if (cells.length < 2) continue;
+    const label = normalizeText(cells[0].text);
+    const value = cleanProfileValue(cells[1].text);
+    if (!value) continue;
+
+    if (label === TH_FACULTY_LABEL) values.faculty = value;
+    if (label === TH_DEPARTMENT_LABEL) values.department = value;
+    if (label === TH_MAJOR_LABEL) values.major = value;
+  }
+  return values;
+}
+
+function valueAfterLabel(text, label, stopLabels) {
+  const stops = stopLabels.map((stop) => stop.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+  const pattern = new RegExp(`${label}\\s+(.+?)(?:\\s+(?:${stops})\\s+|$)`);
+  return cleanProfileValue(text.match(pattern)?.[1] ?? '');
+}
+
+export function parseStudentProfile(html) {
+  const rowValues = labelValueFromRows(html);
+  const text = stripTags(html).replace(/\s+/g, ' ');
+  const facultyValue = rowValues.faculty || valueAfterLabel(text, TH_FACULTY_LABEL, [
+    TH_DEPARTMENT_LABEL,
+    TH_MAJOR_LABEL,
+    '\u0e1a\u0e31\u0e0d\u0e0a\u0e35\u0e18\u0e19\u0e32\u0e04\u0e32\u0e23',
+  ]);
+  const departmentValue = rowValues.department || valueAfterLabel(text, TH_DEPARTMENT_LABEL, [
+    TH_MAJOR_LABEL,
+    '\u0e1a\u0e31\u0e0d\u0e0a\u0e35\u0e18\u0e19\u0e32\u0e04\u0e32\u0e23',
+  ]);
+  const majorValue = rowValues.major || valueAfterLabel(text, TH_MAJOR_LABEL, [
+    '\u0e1a\u0e31\u0e0d\u0e0a\u0e35\u0e18\u0e19\u0e32\u0e04\u0e32\u0e23',
+    '\u0e2d\u0e32\u0e08\u0e32\u0e23\u0e22\u0e4c',
+    '\u0e17\u0e35\u0e48\u0e1b\u0e23\u0e36\u0e01\u0e29\u0e32',
+  ]);
+  const rawDepartment = [
+    departmentValue ? `${TH_DEPARTMENT_LABEL} ${departmentValue}` : '',
+    majorValue ? `${TH_MAJOR_LABEL} ${majorValue}` : '',
+  ].filter(Boolean).join(' ');
+
+  const normalizedDepartment = rawDepartment ? normalizeDepartment(rawDepartment) : '';
+
+  return {
+    faculty: facultyValue ? normalizeFacultyForDepartment(`${TH_FACULTY_LABEL} ${facultyValue}`, normalizedDepartment) : '',
+    department: normalizedDepartment,
+    rawDepartment,
+  };
 }
 
 function cleanEnglishName(value) {

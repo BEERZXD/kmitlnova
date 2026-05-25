@@ -134,15 +134,37 @@ describe('registrar API mappers', () => {
   it('builds stable academic options from the registrar current year and available semesters', () => {
     const options = buildAcademicOptions('2567', '2', {
       currentYear: '2568',
+      years: ['2566', '2568', '2567'],
       semesters: ['1', '2'],
     });
 
     expect(options.years[0]).toEqual({ value: '2568', label: '2568', selected: false });
+    expect(options.years.map((option) => option.value)).toEqual(['2568', '2567', '2566']);
     expect(options.years.find((option) => option.value === '2567')).toMatchObject({ selected: true });
     expect(options.semesters).toEqual([
       { value: '1', label: '1', selected: false },
       { value: '2', label: '2', selected: true },
     ]);
     expect(options.examKinds).toHaveLength(2);
+  });
+
+  it('maps Food Industry student identity from registrar user info', () => {
+    const report = mapRegistrationStudyReport([], {
+      userInfo: {
+        payload: { ticket: { user_id: '66070001' } },
+        faculty_id: '07',
+        fname_th: 'ทดสอบ',
+        lname_th: 'อาหาร',
+      },
+      year: '2568',
+      semester: '1',
+    });
+
+    expect(report.student).toMatchObject({
+      id: '66070001',
+      name: 'ทดสอบ อาหาร',
+      faculty: 'คณะอุตสาหกรรมอาหาร',
+      semester: '1/2568',
+    });
   });
 });

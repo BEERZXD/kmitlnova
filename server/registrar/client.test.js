@@ -35,6 +35,16 @@ const gradeHtml = `
   </tr>
 </table>`;
 
+const ENGINEERING_FACULTY_TH = '\u0e04\u0e13\u0e30\u0e27\u0e34\u0e28\u0e27\u0e01\u0e23\u0e23\u0e21\u0e28\u0e32\u0e2a\u0e15\u0e23\u0e4c';
+const EE_MAJOR_TH = '\u0e2a\u0e32\u0e02\u0e32\u0e27\u0e34\u0e0a\u0e32 \u0e27\u0e34\u0e28\u0e27\u0e01\u0e23\u0e23\u0e21\u0e44\u0e1f\u0e1f\u0e49\u0e32';
+
+const studentProfileHtml = `
+<table>
+  <tr><td>คณะ</td><td>วิศวกรรมศาสตร์</td></tr>
+  <tr><td>ภาควิชา</td><td>วิศวกรรมไฟฟ้า</td></tr>
+  <tr><td>สาขาวิชา</td><td>วิศวกรรมไฟฟ้า</td></tr>
+</table>`;
+
 function htmlResponse(html, init = {}) {
   return new Response(html, {
     status: 200,
@@ -233,6 +243,11 @@ describe('RegistrarClient reports', () => {
         });
       }
 
+      if (requestUrl === 'https://www.reg.kmitl.ac.th/u_officer/student.php?close_header=1') {
+        expect(options.headers.get('Cookie')).toContain('PHPSESSID=legacy-session');
+        return htmlResponse(studentProfileHtml);
+      }
+
       if (requestUrl === 'https://www.reg.kmitl.ac.th/u_student/report_gradetable_show.php?semester=1&year=2568') {
         expect(options.headers.get('Cookie')).toContain('PHPSESSID=legacy-session');
         return htmlResponse(gradeHtml);
@@ -247,7 +262,12 @@ describe('RegistrarClient reports', () => {
     expect(client.loggedIn).toBe(true);
     expect(report).toMatchObject({
       type: 'grade',
-      student: { id: '67010388', semester: '1/2568' },
+      student: {
+        id: '67010388',
+        semester: '1/2568',
+        faculty: ENGINEERING_FACULTY_TH,
+        department: EE_MAJOR_TH,
+      },
       courses: [expect.objectContaining({ code: '01006012', grade: 'A' })],
       summary: [expect.objectContaining({ title: 'Cumulation', gpa: '4.00' })],
     });
@@ -289,6 +309,10 @@ describe('RegistrarClient reports', () => {
         });
       }
 
+      if (String(url) === 'https://www.reg.kmitl.ac.th/u_officer/student.php?close_header=1') {
+        return htmlResponse(studentProfileHtml);
+      }
+
       throw new Error(`Unexpected URL: ${url}`);
     });
     client.loggedIn = true;
@@ -303,7 +327,12 @@ describe('RegistrarClient reports', () => {
 
     expect(report).toMatchObject({
       type: 'study',
-      student: { id: '67010388', semester: '1/2568' },
+      student: {
+        id: '67010388',
+        semester: '1/2568',
+        faculty: ENGINEERING_FACULTY_TH,
+        department: EE_MAJOR_TH,
+      },
       courses: [
         {
           code: '01006051',
@@ -422,6 +451,142 @@ describe('RegistrarClient reports', () => {
     expect(report.courses[0].name).toBe('2568/1 COURSE');
   });
 
+  it('keeps available years sorted high to low even when probes finish out of order', async () => {
+    const client = new RegistrarClient(async (url) => {
+      const requestUrl = String(url);
+      if (requestUrl.includes('get-year-semester-now')) {
+        return new Response(JSON.stringify({ YEAR: '2568', SEMESTER: '1' }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      if (requestUrl.includes('get-regis-result')) {
+        const parsed = new URL(requestUrl);
+        const year = parsed.searchParams.get('year');
+        const semester = parsed.searchParams.get('semester');
+        const rows = semester === '1' && (year === '2568' || year === '2567')
+          ? [
+              {
+                subject_id: `${year}${semester}`,
+                section: '2',
+                lect_or_prac: 'Lecture',
+                teach_day: '2',
+                teach_time: '13:00:00',
+                teach_time2: '15:00:00',
+                teachtime_str: '',
+                subject_ename: `${year}/${semester} COURSE`,
+                credit: '3',
+              },
+            ]
+          : [];
+        if (year === '2568') {
+          await new Promise((resolve) => setTimeout(resolve, 5));
+        }
+        return new Response(JSON.stringify(rows), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      throw new Error(`Unexpected URL: ${url}`);
+    }, { enableSemesterProbe: true });
+    client.loggedIn = true;
+    client.accessToken = 'jwt-token';
+    client.userInfo = { payload: { ticket: { user_id: '67010388' } } };
+
+    const report = await client.fetchReport('study', { year: '2500' });
+
+    expect(report.student.semester).toBe('1/2568');
+    expect(report.options.years.map((option) => option.value)).toEqual(['2568', '2567']);
+  });
+
+  it('loads grade reports from the fallback available semester when the requested semester is empty', async () => {
+    const client = new RegistrarClient(async (url) => {
+      const requestUrl = String(url);
+      if (requestUrl.includes('get-year-semester-now')) {
+        return new Response(JSON.stringify({ YEAR: '2568', SEMESTER: '1' }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      if (requestUrl.includes('get-regis-result')) {
+        const parsed = new URL(requestUrl);
+        const year = parsed.searchParams.get('year');
+        const semester = parsed.searchParams.get('semester');
+        const rows = year === '2568' && semester === '2'
+          ? [
+              {
+                subject_id: '01006052',
+                section: '2',
+                lect_or_prac: 'Lecture',
+                teach_day: '2',
+                teach_time: '13:00:00',
+                teach_time2: '15:00:00',
+                teachtime_str: '',
+                subject_ename: 'SEMESTER 2 COURSE',
+                credit: '3',
+              },
+            ]
+          : [];
+        return new Response(JSON.stringify(rows), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      if (requestUrl === 'https://www.reg.kmitl.ac.th/u_student/report_gradetable_show.php?semester=2&year=2568') {
+        return htmlResponse(gradeHtml.replace('1/2568', '2/2568'));
+      }
+
+      throw new Error(`Unexpected URL: ${url}`);
+    }, { enableSemesterProbe: true });
+    client.loggedIn = true;
+    client.accessToken = 'jwt-token';
+    client.userInfo = { payload: { ticket: { user_id: '67010388' } } };
+
+    const report = await client.fetchReport('grade', { year: '2568', semester: '3' });
+
+    expect(report.student.semester).toBe('2/2568');
+    expect(report.options.semesters).toEqual([
+      { value: '2', label: '2', selected: true },
+    ]);
+  });
+
+  it('blanks faculty and major when the raw student profile is unavailable', async () => {
+    const mismatchedGradeHtml = `
+      <table>
+        <tr><td colspan="7">Faculty of Information Technology</td></tr>
+        <tr><td colspan="7">ID: 65080000 Name: FRIEND ACCOUNT</td></tr>
+        <tr><td colspan="7">Department: --> Major: Bachelor of Science Programme in Food Process Engineering Semester/Year : 1/2568</td></tr>
+        <tr><td>No.</td><td>Course No.</td><td>Course Title</td><td>Section</td><td>Credit</td><td>Type</td><td>Grade</td></tr>
+        <tr><td>1</td><td>01006012</td><td>TEST COURSE</td><td>1</td><td>3</td><td>Lecture</td><td>A</td></tr>
+      </table>`;
+    const client = new RegistrarClient(async (url) => {
+      const requestUrl = String(url);
+      if (requestUrl === 'https://www.reg.kmitl.ac.th/u_student/report_gradetable_show.php?semester=1&year=2568') {
+        return htmlResponse(mismatchedGradeHtml);
+      }
+
+      throw new Error(`Unexpected URL: ${url}`);
+    }, { enableSemesterProbe: false });
+    client.loggedIn = true;
+    client.accessToken = 'jwt-token';
+    client.userInfo = {
+      payload: { ticket: { user_id: '65080000' } },
+      faculty_id: '06',
+    };
+
+    const report = await client.fetchReport('grade', { year: '2568', semester: '1' });
+
+    expect(report.student).toMatchObject({
+      id: '65080000',
+      faculty: '',
+      department: '',
+    });
+  });
+
   it('loads exam reports from the current registrar API for JWT sessions', async () => {
     const client = new RegistrarClient(async (url) => {
       if (String(url).includes('get-year-semester-now')) {
@@ -448,16 +613,29 @@ describe('RegistrarClient reports', () => {
         });
       }
 
+      if (String(url) === 'https://www.reg.kmitl.ac.th/u_officer/student.php?close_header=1') {
+        return htmlResponse(studentProfileHtml);
+      }
+
       throw new Error(`Unexpected URL: ${url}`);
     });
     client.loggedIn = true;
     client.accessToken = 'jwt-token';
-    client.userInfo = { payload: { ticket: { user_id: '67010388' } } };
+    client.userInfo = {
+      payload: { ticket: { user_id: '67010388' } },
+      faculty_id: '07',
+    };
 
     const report = await client.fetchReport('exam', { examKind: 'final' });
 
     expect(report).toMatchObject({
       type: 'exam',
+      student: {
+        id: '67010388',
+        semester: '1/2568',
+        faculty: ENGINEERING_FACULTY_TH,
+        department: EE_MAJOR_TH,
+      },
       exams: [expect.objectContaining({ code: '01006051', dateRaw: '2025-10-22' })],
     });
   });
@@ -465,6 +643,8 @@ describe('RegistrarClient reports', () => {
   it('uses the registration API schedule when legacy exam rows only have generic final-exam locations', async () => {
     const legacyGenericExamHtml = `
       <table>
+        <tr><td colspan="9">Faculty of Information Technology</td></tr>
+        <tr><td colspan="9">Department: --> Major: Bachelor of Science Program in Food Process Engineering Semester/Year : 2/2568</td></tr>
         <tr><td>รหัสวิชา</td><td>เวลาสอบ</td></tr>
         <tr><td>ลำดับที่</td><td>รหัสวิชา</td><td>รายวิชา</td><td>กลุ่ม</td><td>หน่วยกิต</td><td>ทฤษฎี/ปฏิบัติ</td><td>วัน-เดือน-ปี ที่สอบ</td><td>เวลาสอบ</td><td>อาคาร-ห้อง-ที่นั่งสอบ</td></tr>
         <tr><td>1</td><td>01026216</td><td>PROBABILITY AND STATISTICS FOR ENGINEERING</td><td>2</td><td>3 (3-0)</td><td>ทฤษฎี</td><td>จ. 16 มี.ค. 26</td><td>09:30-12:30 น.</td><td>สอบในช่วงสอบปลายภาค (ในห้องสอบ)<br>Examination during the final exam (in the examination room)</td></tr>
@@ -472,6 +652,8 @@ describe('RegistrarClient reports', () => {
       </table>`;
     const legacySeatExamHtml = `
       <table>
+        <tr><td colspan="9">Faculty of Information Technology</td></tr>
+        <tr><td colspan="9">Department: --> Major: Bachelor of Science Program in Food Process Engineering Semester/Year : 2/2568</td></tr>
         <tr><td>รหัสวิชา</td><td>เวลาสอบ</td></tr>
         <tr><td>ลำดับที่</td><td>รหัสวิชา</td><td>รายวิชา</td><td>กลุ่ม</td><td>หน่วยกิต</td><td>ทฤษฎี/ปฏิบัติ</td><td>วัน-เดือน-ปี ที่สอบ</td><td>เวลาสอบ</td><td>อาคาร-ห้อง-ที่นั่งสอบ</td></tr>
         <tr><td>1</td><td>01026216</td><td>PROBABILITY AND STATISTICS FOR ENGINEERING</td><td>2</td><td>3 (3-0)</td><td>ทฤษฎี</td><td>จ. 16 มี.ค. 26</td><td>09:30-12:30 น.</td><td><a href="report_examtable_seat.php?data=x">อาคาร 12 ชั้น:E12-505:F2</a></td></tr>
@@ -529,7 +711,10 @@ describe('RegistrarClient reports', () => {
     });
     client.loggedIn = true;
     client.accessToken = 'jwt-token';
-    client.userInfo = { payload: { ticket: { user_id: '67010388' } } };
+    client.userInfo = {
+      payload: { ticket: { user_id: '67010388' } },
+      faculty_id: '07',
+    };
 
     const finalReport = await client.fetchReport('exam', { year: '2568', semester: '2', examKind: 'final' });
     const midtermReport = await client.fetchReport('exam', { year: '2568', semester: '2', examKind: 'midterm' });
@@ -552,6 +737,10 @@ describe('RegistrarClient reports', () => {
         isTba: true,
       }),
     ]);
+    expect(finalReport.student).toMatchObject({
+      faculty: '',
+      department: '',
+    });
     expect(midtermReport.exams).toEqual([
       expect.objectContaining({
         code: '01026216',

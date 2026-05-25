@@ -42,7 +42,7 @@ export function StudyView({ report }: { report: StudyReport }) {
       <ReportTitleCard title={title} student={report.student} />
 
       {!report.courses.length || !days.length ? (
-        <div className="kpm-empty">No registered courses found for this semester.</div>
+        <div className="kpm-empty">ไม่พบตารางเรียนในภาคการศึกษานี้</div>
       ) : (
         <div className="kpm-scroll-surface">
           <div
@@ -84,11 +84,17 @@ export function StudyView({ report }: { report: StudyReport }) {
                       const endCol = Math.ceil((slot.endMinutes - timeRange.start) / 15) + 2;
                       const section = slot.isPractice ? course.practiceSection : course.theorySection;
                       const sectionType = slot.isPractice ? practiceLabel : theoryLabel;
+                      const durationMinutes = Math.max(0, slot.endMinutes - slot.startMinutes);
+                      const isShortSlot = durationMinutes <= 60;
+                      const slotLabel = `${course.name} | Section ${section || '-'} (${sectionType}) | ${slot.start}-${slot.end}`;
 
                       return (
                         <article
                           key={`${course.code}-${slot.day}-${slot.start}-${slot.end}`}
-                          className="kpm-block"
+                          className={isShortSlot ? 'kpm-block kpm-block-short' : 'kpm-block'}
+                          title={slotLabel}
+                          aria-label={slotLabel}
+                          tabIndex={isShortSlot ? 0 : undefined}
                           style={{
                             gridRow: row,
                             gridColumn: `${startCol} / ${Math.max(startCol + 1, endCol)}`,

@@ -50,7 +50,7 @@ function isValidDate(value) {
   return /^\d{4}-\d{2}-\d{2}$/.test(String(value ?? '')) && value !== '0000-00-00';
 }
 
-function makeStudent(userInfo, year, semester) {
+export function makeRegistrationStudent(userInfo, year, semester) {
   const ticket = userInfo?.payload?.ticket ?? {};
   const thaiName = [userInfo?.fname_th, userInfo?.lname_th].filter(Boolean).join(' ');
   const englishName = [userInfo?.fname_en, userInfo?.lname_en].filter(Boolean).join(' ');
@@ -64,6 +64,11 @@ function makeStudent(userInfo, year, semester) {
   };
 }
 
+function sortYearsHighToLow(values) {
+  return [...new Set(values.map((value) => String(value)).filter(Boolean))]
+    .sort((a, b) => Number(b) - Number(a));
+}
+
 function makeOptions(values, selectedValue) {
   return values.map((value) => ({
     value: String(value),
@@ -74,7 +79,9 @@ function makeOptions(values, selectedValue) {
 
 export function buildAcademicOptions(year, semester, options = {}) {
   const currentYear = Number(options.currentYear ?? year) || new Date().getFullYear() + 543;
-  const years = options.years?.length ? options.years : [currentYear, currentYear - 1, currentYear - 2];
+  const years = options.years?.length
+    ? sortYearsHighToLow(options.years)
+    : [currentYear, currentYear - 1, currentYear - 2].map(String);
   const semesters = options.semesters?.length ? options.semesters : ['1', '2', '3'];
   return {
     years: makeOptions(years, year || years[0] || currentYear),
@@ -166,7 +173,7 @@ export function mapRegistrationStudyReport(rows, { userInfo, year, semester }) {
 
   return {
     type: 'study',
-    student: makeStudent(userInfo, year, semester),
+    student: makeRegistrationStudent(userInfo, year, semester),
     courses: [...coursesByCode.values()].map((course) => ({
       ...course,
       practiceSection: course.practiceSection || '-',
@@ -218,7 +225,7 @@ export function mapRegistrationExamReport(rows, { userInfo, year, semester, exam
 
   return {
     type: 'exam',
-    student: makeStudent(userInfo, year, semester),
+    student: makeRegistrationStudent(userInfo, year, semester),
     exams,
   };
 }

@@ -1,0 +1,13 @@
+# One login image URL or public path per line.
+# Blank lines and lines starting with # are ignored.
+# Optional framing: add " | <object-position>" after the URL.
+# Examples:
+# https://example.com/campus-photo.jpg
+# https://example.com/campus-photo.jpg | 50% 35%
+# /login-bg.jpg | center top
+
+https://www.kmitl.ac.th/sites/default/files/2025-05/75625360_2708828382511763_3205029120262012928_n.jpg | 50% 75%
+https://www.kmitl.ac.th/sites/default/files/styles/wide/public/2025-05/_DSC5276.jpg?itok=OqNieiak | 50% 0%
+https://www.kmitl.ac.th/sites/default/files/2025-08/44.1%E0%B8%81%E0%B8%B1%E0%B8%99%E0%B8%95%E0%B9%8C%E0%B8%93%E0%B8%A0%E0%B8%B1%E0%B8%84_%E0%B8%88%E0%B8%B4%E0%B8%99%E0%B8%94%E0%B8%B2%E0%B8%9B%E0%B8%A3%E0%B8%B0%E0%B9%80%E0%B8%AA%E0%B8%A3%E0%B8%B4%E0%B8%90.jpg | 50% 100%
+https://www.kmitl.ac.th/sites/default/files/2025-05/_DSC5655.jpg | 50% 20%
+https://www.kmitl.ac.th/sites/default/files/2025-06/_DSC5656.jpg | 50% 25%

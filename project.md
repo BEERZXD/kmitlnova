@@ -21,8 +21,10 @@ This project is related to `D:\Project\kmitlpromax`, the Chrome extension that m
 - The authenticated action bar intentionally has no manual refresh button. Changing tab, semester, year, or exam kind loads the selected report; browser reload remains available for a full app restart.
 - Academic year and semester selectors should show only years/semesters where the student has data.
 - Semester 3 must not appear if the student has no semester 3 registration rows.
+- Changing academic year clears the currently selected semester before loading, so stale semesters from the previous year cannot remain selected while new options are loading.
+- Switching report pages must not reuse a stale selected year or semester from another page when the newly loaded report provides its own selected options.
 - Image export is image-only and captures the report surface, not the entire app shell. Exports temporarily force the report surface into the desktop report layout so mobile/iPad users still download a desktop-style image.
-- Mobile and iPad layouts keep dense timetable and grade report structures intact, using controlled horizontal scrolling on the timetable grid or table surface only. Report title cards and TBA sections stay in the normal page flow, and timetable scroll surfaces avoid reserved scrollbar gutters so grid borders align with the title card.
+- Mobile and iPad layouts keep dense timetable and grade report structures intact, using controlled horizontal scrolling on the timetable grid or table surface only. Study timetable grids intentionally use a wider mobile/tablet canvas and taller rows so short one-hour subject cards remain readable instead of being compressed. Report title cards and TBA sections stay in the normal page flow, and timetable scroll surfaces avoid reserved scrollbar gutters so grid borders align with the title card.
 - Exam timetable grid rows use auto sizing (not 1fr) and no min-height so date rows stay compact on mobile instead of inflating to fill the grid.
 
 ## Tech Stack
@@ -36,8 +38,10 @@ This project is related to `D:\Project\kmitlpromax`, the Chrome extension that m
 
 ## NPM Scripts
 - `npm run dev`: starts `node server/index.js` and `vite --host 127.0.0.1`.
+- `npm run dev:lan`: starts backend and Vite on `0.0.0.0` for testing from phones/tablets on the same local network.
 - `npm run build`: builds the Vite frontend into `dist/`.
 - `npm run preview`: runs only the Node backend, which can serve `dist/` if it exists.
+- `npm run preview:lan`: runs the built/preview backend on `0.0.0.0` for local-network testing.
 - `npm test`: runs the Vitest suite.
 
 ## Local And Hosted Runtime
@@ -45,6 +49,7 @@ This project is related to `D:\Project\kmitlpromax`, the Chrome extension that m
 - Frontend dev URL: `http://127.0.0.1:5173`.
 - Vite proxies `/api` to `http://127.0.0.1:8787`.
 - The backend binds to `127.0.0.1`, not a public interface.
+- For same-Wi-Fi phone/tablet testing, use `npm run dev:lan` and open `http://<computer-lan-ip>:5173`. This keeps the default dev command local-only while making LAN access explicit.
 - In production/preview mode, `server/index.js` serves files from `dist/`.
 - If `dist/` does not exist, the backend returns a JSON message saying to start Vite or build the frontend.
 - On Vercel, `/api/:path*` explicitly rewrites to `api/[...path].js` and all non-API routes rewrite to the built SPA `index.html`.
@@ -184,6 +189,10 @@ Current integration points in `server/registrar/client.js`:
   - Creates legacy PHP session from the SSO access token.
 - `https://www.reg.kmitl.ac.th/index/index_api.php?function=get-info`
   - Verifies legacy PHP login state.
+- `https://www.reg.kmitl.ac.th/u_student/index.php`
+  - Authenticated student home page used to discover the raw student-profile content action.
+- `https://www.reg.kmitl.ac.th/u_officer/student.php?close_header=1`
+  - Authenticated student profile HTML source reached from the student page and used as the only faculty/major source for report title cards.
 - Legacy report pages under `https://www.reg.kmitl.ac.th/`.
 
 ## Login Flow
@@ -219,6 +228,7 @@ The browser cookie:
 - `cookies`: legacy PHP cookies.
 - `accessToken`: registrar JWT.
 - `userInfo`: registrar user profile data.
+- `studentProfile`: parsed raw faculty/major from the authenticated student profile page.
 - `loggedIn`: local login flag.
 - `semesterRowsCache`: registration API rows by year and semester.
 - `availableAcademicCache`: available years/semesters discovered for selector options.
@@ -242,21 +252,26 @@ Frontend behavior in `src/App.tsx`:
 - On startup, app calls `GET /api/session`.
 - After login, the study report loads first.
 - Reports are cached in React state after loading.
-- Switching to a tab loads that report if not already loaded.
+- Switching to a tab loads that report if not already loaded, without sending the previous tab's selected year or semester as default request params.
+- Switching to a different report tab clears that tab's cached report before loading, so the visible timetable/exam/grade table cannot remain from an old semester/year while the selectors reset.
 - Changing semester, year, or exam kind clears report state and force-loads the selected active report.
 - Selector options from the latest report are saved so controls stay stable while switching views.
+- When a newly loaded report returns selected year/semester options, the frontend updates the selector state from that report so values do not carry over incorrectly between study, exam, and grade pages.
 - If a report request says the session expired, the app logs out locally and clears report state.
 
 Backend behavior in `RegistrarClient.fetchReport()`:
 - If not logged in, throws `Not logged in`.
 - If JWT is available, study/exam primarily use the registration API and legacy pages for enrichment/fallback.
 - Grade results use the legacy PHP report page because grade data is not currently mapped from the JWT registration API.
+- All report types use faculty/major only from the authenticated student profile page. If that profile page cannot be parsed, report title cards leave faculty and major blank instead of using API `faculty_id`, legacy report text, or conversion-table guesses.
+- The frontend keeps one central title-card faculty/major identity across cached study, exam, and grade reports. Loading a report with blank profile fields clears those fields from every cached title card, so semesters/years cannot show mixed organization data.
 - Available years and semesters are probed from real registration rows and only non-empty options are exposed.
 
 ## Academic Option Discovery
 - Backend calls `get-year-semester-now` to anchor the current academic year.
 - Backend probes candidate academic years and semesters `1`, `2`, and `3`.
 - Only years with at least one registration row are returned.
+- Available academic years are always sorted from newest to oldest after asynchronous registrar probes finish.
 - Only semesters with at least one registration row for the effective year are returned.
 - If the requested year or semester has no data, backend falls back to the first available option for that student.
 - Year selector options are anchored to registrar current year to avoid dropdown drift when changing years.
@@ -295,7 +310,9 @@ Study slot behavior:
 - Time placement uses 15-minute CSS grid columns.
 - Slots merge when the same subject has same-day, same-type sessions with a gap of 30 minutes or less, matching KMITL Pro Max behavior.
 - Subject boxes use centered text.
+- One-hour-or-shorter study blocks use a compact wrapped style, retain a title tooltip, and expand on hover, keyboard focus, or touch active state so full subject details stay readable. Mobile and tablet breakpoints keep the timetable scroll canvas wider and rows taller to avoid over-compressing these short blocks.
 - Subject colors use the shared sequential palette in `src/reportDisplay.ts`.
+- If no study timetable rows exist for the selected semester, the empty-state copy is `ไม่พบตารางเรียนในภาคการศึกษานี้`.
 
 ## Exam Timetable Data
 Exam timetable can come from:
@@ -346,6 +363,7 @@ Exam behavior:
   - Midterm: `(กลางภาค)`
 - Exam date labels use Thai Buddhist-calendar dates, for example `16 มี.ค. 2569`, with Thai weekday on the second line.
 - Scheduled rows stay in the upper timetable grid.
+- If no scheduled exam rows exist for the selected semester, the empty-state copy is Thai.
 - Unscheduled rows render under `รายวิชาที่ไม่ระบุตารางสอบ`.
 - TBA reasons are merged from the legacy report so unscheduled cards show Thai registrar text such as `สอบในช่วงสอบปลายภาค (ในห้องสอบ)` or `จัดสอบเอง`, not generic `TBA`.
 - Generic final-exam location English duplicate text is trimmed.
@@ -377,7 +395,8 @@ Grade behavior:
   - Enlarged blue GPS/GPA value styling.
 - Student names are de-duplicated when the registrar grade page includes both English and Thai names in the same `Name:` field.
 - Legacy grade title-card identity fields are normalized to Thai where known: KMITL university name, Faculty of Engineering, Electrical Engineering bachelor major, and mixed English/Thai `Name:` rows prefer the Thai name.
-- The shared report title card also applies the same Thai display normalization in the frontend so already-loaded report payloads with legacy English identity fields still render Thai.
+- Legacy and frontend title-card identity fields do not infer faculty/major from English legacy text or API faculty IDs. Faculty and major must come from the parsed raw Thai student profile data; otherwise those fields are blank.
+- If no grade rows exist for the selected semester, the empty-state copy is `ไม่พบผลการเรียนในภาคศึกษานี้`.
 - Grade note rendering uses the requested fixed five-line Thai explanation:
   - `หมายเหตุ:`
   - `X = ประกาศเกรดแล้ว   |   X = ยังไม่ประกาศเกรด`
@@ -404,6 +423,7 @@ Important parser behavior:
 - Parses study rows, rooms, buildings, and time slots.
 - Parses exam rows, dates, time ranges, room/seat locations, generic final-exam location messages, and TBA reasons.
 - Parses grade courses, summaries, and notes.
+- Parses the authenticated student profile page (`u_officer/student.php?close_header=1`) to extract raw faculty, department, and major values without relying on a conversion table when that page is available.
 - Cleans duplicated English translation from `สอบในช่วงสอบปลายภาค (ในห้องสอบ) Examination during the final exam (in the examination room)`.
 
 ## Registration API Mapping
@@ -423,13 +443,22 @@ Important mapper behavior:
 ## Frontend UI And Branding
 - App name: `KMITL Nova`.
 - Official KMITL logo URL: `https://www.kmitl.ac.th/themes/custom/kmitl/logo.svg`.
+- Login screen uses a modern split layout with local asset `/login-bg.jpg`: desktop/tablet show the supplied image as a contained visual panel beside the form, while mobile stacks it as a cropped banner above the form. The image is decorative and does not carry login text.
+- Login screen is constrained to the viewport without page scrolling; the login card stays centered in the available main area, keeps a visible gap above the footer, and the KMITL logo is intentionally larger than the compact authenticated header logo.
+- Pressing plain Enter in the login form submits the same action as clicking the Login button.
+- Login visual images are configured through `public/login-images.txt`, one local path or HTTPS URL per line. Blank lines and `#` comments are ignored. Each line can optionally add a CSS `object-position` value after a pipe, such as `https://example.com/campus.jpg | 50% 35%`; plain lines default to `50% 50%`. The login page cycles through configured images every 5 seconds with a smooth crossfade only, and falls back to `/login-bg.jpg` if the file is missing or empty.
 - Login subtitle: `ระบบดึงข้อมูลการเรียน สจล.`
 - Login credential note: `ไม่มีการบันทึกรหัสผ่านลงไฟล์หรือฐานข้อมูลใดๆ` (centered).
-- Authenticated header subtitle: `ดูตารางเรียน ตารางสอบ และผลการเรียน สจล. ได้ง่ายๆ!`
+- Authenticated header subtitle: `ระบบดึงข้อมูลการเรียน สจล.`
 - No startup loading screen. The app shows the login page immediately. A background session check still runs so local dev auto-logs in if a session exists.
 - Loading states are Thai-first:
   - Report loading: `กำลังโหลดข้อมูลทะเบียน` / `กำลังดึงข้อมูลจาก KMITL`
   - Login submit: `กำลังเข้าสู่ระบบ...`
+- Shared empty/error sentence copy is Thai:
+  - Error title: `โหลดข้อมูลไม่สำเร็จ`
+  - Empty title: `ข้อมูลยังไม่ถูกโหลด`
+  - Empty detail: `เลือกรายการที่ต้องการเพื่อโหลดข้อมูล`
+  - Grade empty-state copy: `ไม่พบผลการเรียนในภาคศึกษานี้`
 - Favicon uses the official KMITL logo SVG from `https://www.kmitl.ac.th/themes/custom/kmitl/logo.svg`.
 - Shared footer:
   - Text: `MADE WITH ❤️ BY _BXXR.T`
@@ -442,8 +471,9 @@ Important mapper behavior:
   - Semester selector.
   - Year selector.
   - Exam kind selector only on exam tab.
+  - On phone layouts, semester, year, and exam kind selectors stay compact on one row when present.
   - Export image button.
-  - Logout button.
+  - Logout button; on phone layouts it is icon-only and aligned to the right of the app title.
 - No manual refresh button.
 
 ## Report Title Cards
@@ -452,9 +482,13 @@ Report title cards are Thai-first and should include:
 - University name.
 - Faculty.
 - Department/major when available.
+- Department labels are reduced to the major line when a major is available from the raw Thai student profile data, so the card shows faculty and major without the extra department prefix.
+- If raw Thai student profile data is unavailable or inconsistent with known title-card rules, the card omits faculty and major rather than displaying fallback data.
+- Title cards always reserve the same organization row height, even when faculty/major are blank, so report cards stay visually aligned across tabs, semesters, years, and exam kinds.
 - Semester/year.
 - Student ID and name.
 - Exam kind subtitle for exam timetable.
+- Long faculty, department/major, and student identity text wraps cleanly in the title card; phone layouts stack identity items to avoid squeezed or uneven lines.
 
 ## Image Export
 Image export is handled in `src/App.tsx` and `src/exportImage.ts`.
@@ -471,6 +505,7 @@ Behavior:
 - Disables card drop shadows (`box-shadow: none !important;` on `.kpm-grid`, `.kpm-info-card`, `.kpm-grade-container`, and `.kpm-summary-container`) during desktop export mode. This completely avoids Safari's high-DPI `foreignObject` box-shadow clipping bug, which was causing the faint gray vertical bar behind the right border.
 - While exporting is active, the Export button is disabled and its text changes to `Exporting...` to prevent double-triggering.
 - Export-desktop mode sets `overflow: visible` on grade/summary containers to prevent scrollbar bleed in the captured image.
+- Export-desktop mode keeps report title-card identity rows in desktop formatting even when exporting from a phone viewport, so mobile stacked metadata does not leak into exported images.
 - Uses a solid white (`#ffffff`) background for the export wrapper and options to guarantee WebKit encodes any off-screen bounds beautifully.
 - Completely removed deprecated `-webkit-overflow-scrolling: touch` rules from stylesheets to prevent WebKit from creating detached hardware-accelerated scroll layers.
 - Uses a "double-call" workaround on `toJpeg()` in `handleExport` to trigger layout and paint passes in the WebKit rendering engine before retrieving the final image.

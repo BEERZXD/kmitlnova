@@ -24,7 +24,7 @@ describe('report display helpers', () => {
     expect(examKindLabel('midterm')).toBe('(กลางภาค)');
   });
 
-  it('normalizes legacy English title-card identity fields to Thai for display', () => {
+  it('blanks legacy English title-card faculty and major instead of converting them', () => {
     expect(normalizeTitleCardStudent({
       id: '67010388',
       name: 'Mr.Thanathorn Thepsumrung',
@@ -35,9 +35,54 @@ describe('report display helpers', () => {
       raw: 'ID: 67010388 Name: Mr.Thanathorn Thepsumrung นายธนธรณ์ เทพสำเริง Department: --> Major: Bachelor of Engineering Programme in Electrical Engineering Semester/Year : 2/2568',
     })).toMatchObject({
       university: 'สถาบันเทคโนโลยีพระจอมเกล้าเจ้าคุณทหารลาดกระบัง',
-      faculty: 'คณะวิศวกรรมศาสตร์',
-      department: 'ภาควิชา วิศวกรรมไฟฟ้า สาขาวิชา วิศวกรรมไฟฟ้า',
+      faculty: '',
+      department: '',
       name: 'นายธนธรณ์ เทพสำเริง',
+    });
+  });
+
+  it('blanks Food Industry English identity fields instead of converting them', () => {
+    expect(normalizeTitleCardStudent({
+      id: '66070001',
+      name: 'Friend Account',
+      semester: '1/2568',
+      university: "King Mongkut's Institute of Technology Ladkrabang",
+      faculty: 'Faculty of Food Industry',
+      department: 'Bachelor of Science Program in Food Process Engineering',
+      raw: '',
+    })).toMatchObject({
+      faculty: '',
+      department: '',
+    });
+  });
+
+  it('blanks known mismatched Thai faculty and major pairs', () => {
+    expect(normalizeTitleCardStudent({
+      id: '65080000',
+      name: 'Friend Account',
+      semester: '1/2568',
+      university: "King Mongkut's Institute of Technology Ladkrabang",
+      faculty: 'คณะเทคโนโลยีสารสนเทศ',
+      department: 'สาขาวิชา วิศวกรรมแปรรูปอาหาร',
+      raw: '',
+    })).toMatchObject({
+      faculty: '',
+      department: '',
+    });
+  });
+
+  it('keeps raw Thai faculty and major from the student profile', () => {
+    expect(normalizeTitleCardStudent({
+      id: '65080000',
+      name: 'Friend Account',
+      semester: '1/2568',
+      university: "King Mongkut's Institute of Technology Ladkrabang",
+      faculty: 'คณะอุตสาหกรรมอาหาร',
+      department: 'สาขาวิชา วิศวกรรมแปรรูปอาหาร',
+      raw: '',
+    })).toMatchObject({
+      faculty: 'คณะอุตสาหกรรมอาหาร',
+      department: 'สาขาวิชา วิศวกรรมแปรรูปอาหาร',
     });
   });
 });

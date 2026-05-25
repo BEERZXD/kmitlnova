@@ -61,7 +61,7 @@ export function GradeView({ report }: { report: GradeReport }) {
           </table>
         </div>
       ) : (
-        <div className="kpm-empty">No grade rows found for this selection.</div>
+        <div className="kpm-empty">ไม่พบผลการเรียนในภาคศึกษานี้</div>
       )}
 
       {report.summary.length ? (

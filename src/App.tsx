@@ -12,6 +12,11 @@ import type { ApiOption, ReportData, ReportParams, ReportType } from './types';
 
 const initialTab: ReportType = 'study';
 
+type TitleIdentity = {
+  faculty: string;
+  department: string;
+};
+
 function selectedOption(options: ApiOption[]) {
   return options.find((option) => option.selected)?.value ?? options[0]?.value ?? '';
 }
@@ -22,6 +27,79 @@ function nextSelection(options: ApiOption[], current: string) {
 
 function optionsFor(report: ReportData | undefined, key: 'semesters' | 'years' | 'examKinds') {
   return ((report?.options ?? {}) as Record<string, ApiOption[]>)[key] ?? [];
+}
+
+type SelectionValues = {
+  semester: string;
+  year: string;
+  examKind: string;
+};
+
+function reportParamsFromSelection(selection: SelectionValues): ReportParams {
+  const params: ReportParams = {};
+  if (selection.semester) params.semester = selection.semester;
+  if (selection.year) params.year = selection.year;
+  if (selection.examKind) params.examKind = selection.examKind;
+  return params;
+}
+
+export function getReportLoadParams(_currentSelection: SelectionValues, explicitParams?: ReportParams): ReportParams {
+  return explicitParams ?? {};
+}
+
+export function getSelectionChangeState(current: SelectionValues, next: Partial<ReportParams>) {
+  const yearChanged = next.year !== undefined && next.year !== current.year;
+  const nextSelected = {
+    semester: yearChanged ? '' : next.semester ?? current.semester,
+    year: next.year ?? current.year,
+    examKind: next.examKind ?? current.examKind,
+  };
+
+  return {
+    nextSelected,
+    reportParams: reportParamsFromSelection(nextSelected),
+    resetSemesterOptions: yearChanged,
+  };
+}
+
+export function titleIdentityFromReport(report: ReportData): TitleIdentity {
+  return {
+    faculty: report.student.faculty ?? '',
+    department: report.student.department ?? '',
+  };
+}
+
+function withTitleIdentity<T extends ReportData>(report: T, identity: TitleIdentity): T {
+  return {
+    ...report,
+    student: {
+      ...report.student,
+      faculty: identity.faculty,
+      department: identity.department,
+    },
+  } as T;
+}
+
+export function applyTitleIdentityToReports(
+  reports: Partial<Record<ReportType, ReportData>>,
+  identity: TitleIdentity,
+) {
+  return Object.fromEntries(
+    Object.entries(reports).map(([type, report]) => [
+      type,
+      report ? withTitleIdentity(report, identity) : report,
+    ]),
+  ) as Partial<Record<ReportType, ReportData>>;
+}
+
+export function clearReportForTab(
+  reports: Partial<Record<ReportType, ReportData>>,
+  type: ReportType,
+) {
+  return {
+    ...reports,
+    [type]: undefined,
+  };
 }
 
 export default function App() {
@@ -39,6 +117,7 @@ export default function App() {
   const [savedSemesterOptions, setSavedSemesterOptions] = useState<ApiOption[]>([]);
   const [savedYearOptions, setSavedYearOptions] = useState<ApiOption[]>([]);
   const [savedExamKindOptions, setSavedExamKindOptions] = useState<ApiOption[]>([]);
+  const [titleIdentity, setTitleIdentity] = useState<TitleIdentity | null>(null);
   const exportRef = useRef<HTMLDivElement>(null);
 
   const activeReport = reports[active];
@@ -61,8 +140,17 @@ export default function App() {
     setLoading(true);
     setError('');
     try {
-      const data = await fetchReport(type, overrideParams ?? (type === active ? params : {}));
-      setReports((current) => ({ ...current, [type]: data }));
+      const data = await fetchReport(type, getReportLoadParams({
+        semester: selectedSemester,
+        year: selectedYear,
+        examKind: type === 'exam' ? selectedExamKind : '',
+      }, overrideParams));
+      const nextTitleIdentity = titleIdentityFromReport(data);
+      setTitleIdentity(nextTitleIdentity);
+      setReports((current) => applyTitleIdentityToReports({
+        ...current,
+        [type]: data,
+      }, nextTitleIdentity));
       const nextSemesterOptions = optionsFor(data, 'semesters');
       const nextYearOptions = optionsFor(data, 'years');
       if (nextSemesterOptions.length) setSavedSemesterOptions(nextSemesterOptions);
@@ -96,6 +184,19 @@ export default function App() {
     if (loggedIn) void loadReport(active);
   }, [active, loggedIn]);
 
+  function handleTabChange(type: ReportType) {
+    if (type === active) return;
+    setActive(type);
+    setError('');
+    setSelectedSemester('');
+    setSelectedYear('');
+    if (type !== 'exam') setSelectedExamKind('');
+    setSavedSemesterOptions([]);
+    setSavedYearOptions([]);
+    if (type !== 'exam') setSavedExamKindOptions([]);
+    setReports((current) => clearReportForTab(current, type));
+  }
+
   async function handleLogin(studentId: string, password: string) {
     setLoginError('');
     setLoading(true);
@@ -104,6 +205,7 @@ export default function App() {
       setLoggedIn(true);
       setActive(initialTab);
       setReports({});
+      setTitleIdentity(null);
       setSavedSemesterOptions([]);
       setSavedYearOptions([]);
       setSavedExamKindOptions([]);
@@ -118,6 +220,7 @@ export default function App() {
     await logoutRequest().catch(() => undefined);
     setLoggedIn(false);
     setReports({});
+    setTitleIdentity(null);
     setSelectedSemester('');
     setSelectedYear('');
     setSelectedExamKind('');
@@ -189,17 +292,20 @@ export default function App() {
   }
 
   function handleSelectionChange(next: Partial<ReportParams>) {
-    const merged = {
-      semester: next.semester ?? selectedSemester,
-      year: next.year ?? selectedYear,
-      examKind: next.examKind ?? selectedExamKind,
-    };
+    const { nextSelected, reportParams, resetSemesterOptions } = getSelectionChangeState({
+      semester: selectedSemester,
+      year: selectedYear,
+      examKind: selectedExamKind,
+    }, next);
 
-    if (next.semester !== undefined) setSelectedSemester(merged.semester);
-    if (next.year !== undefined) setSelectedYear(merged.year);
-    if (next.examKind !== undefined) setSelectedExamKind(merged.examKind);
-    setReports((current) => ({ ...current, study: undefined, exam: undefined, grade: undefined }));
-    void loadReport(active, true, merged);
+    if (next.semester !== undefined || resetSemesterOptions) setSelectedSemester(nextSelected.semester);
+    if (next.year !== undefined) setSelectedYear(nextSelected.year);
+    if (next.examKind !== undefined) setSelectedExamKind(nextSelected.examKind);
+    if (resetSemesterOptions) setSavedSemesterOptions([]);
+    setReports((current) => titleIdentity
+      ? applyTitleIdentityToReports({ ...current, study: undefined, exam: undefined, grade: undefined }, titleIdentity)
+      : { ...current, study: undefined, exam: undefined, grade: undefined });
+    void loadReport(active, true, reportParams);
   }
 
 
@@ -218,7 +324,7 @@ export default function App() {
       selectedSemester={selectedSemester}
       selectedYear={selectedYear}
       selectedExamKind={selectedExamKind}
-      onTabChange={setActive}
+      onTabChange={handleTabChange}
       onSemesterChange={(value) => handleSelectionChange({ semester: value })}
       onYearChange={(value) => handleSelectionChange({ year: value })}
       onExamKindChange={(value) => handleSelectionChange({ examKind: value })}
@@ -230,7 +336,7 @@ export default function App() {
         {loading && !activeReport ? (
           <EmptyState state="loading" title="กำลังโหลดข้อมูลทะเบียน" detail="กำลังดึงข้อมูลจาก KMITL" />
         ) : error ? (
-          <EmptyState state="error" title="Could not load this view" detail={error} onRetry={() => void loadReport(active, true)} />
+          <EmptyState state="error" title="โหลดข้อมูลไม่สำเร็จ" detail={error} onRetry={() => void loadReport(active, true, params)} />
         ) : activeReport?.type === 'study' ? (
           <StudyView report={activeReport} />
         ) : activeReport?.type === 'exam' ? (
@@ -238,7 +344,7 @@ export default function App() {
         ) : activeReport?.type === 'grade' ? (
           <GradeView report={activeReport} />
         ) : (
-          <EmptyState state="empty" title="No data loaded yet" detail="Choose a view to load registrar data." />
+          <EmptyState state="empty" title="ข้อมูลยังไม่ถูกโหลด" detail="เลือกรายการที่ต้องการเพื่อโหลดข้อมูล" />
         )}
       </div>
     </AppShell>

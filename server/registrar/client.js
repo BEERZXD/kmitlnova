@@ -1,5 +1,6 @@
 import {
   buildAcademicOptions,
+  makeRegistrationStudent,
   mapRegistrationExamReport,
   mapRegistrationStudyReport,
 } from './apiMappers.js';
@@ -7,6 +8,7 @@ import {
   parseExamReport,
   parseGradeReport,
   parseSelectionOptions,
+  parseStudentProfile,
   parseStudyReport,
 } from './parsers.js';
 
@@ -25,6 +27,8 @@ const KEYCLOAK_CLIENT_ID = 'KMITL-client';
 const KEYCLOAK_REDIRECT_URI = 'https://regis.reg.kmitl.ac.th/';
 const LEGACY_LOGIN_URL = 'https://www.reg.kmitl.ac.th/user/login.php';
 const LEGACY_INFO_URL = 'https://www.reg.kmitl.ac.th/index/index_api.php?function=get-info';
+const STUDENT_HOME_URL = 'https://www.reg.kmitl.ac.th/u_student/index.php';
+const STUDENT_PROFILE_URL = 'https://www.reg.kmitl.ac.th/u_officer/student.php?close_header=1';
 
 const USERNAME_FIELDS = [
   'student_id',
@@ -84,6 +88,12 @@ function parseForm(html) {
   }
 
   return { action, method, fields };
+}
+
+function extractStudentProfileUrl(html) {
+  const match = html.match(/getiContent\(\s*['"]([^'"]*student\.php\?close_header=1[^'"]*)['"]\s*\)/i)
+    ?? html.match(/(?:href|src)=["']([^"']*student\.php\?close_header=1[^"']*)["']/i);
+  return match?.[1] ?? '';
 }
 
 function findField(fields, candidates, fallbackPattern) {
@@ -211,6 +221,29 @@ function enrichExamDetails(report, locationReport, reasonReport) {
   };
 }
 
+function hasThaiText(value) {
+  return /[\u0e00-\u0e7f]/.test(String(value ?? ''));
+}
+
+function withPreferredStudentIdentity(report, userInfo, year, semester, studentProfile = null) {
+  const current = report.student ?? {};
+  const registrationStudent = makeRegistrationStudent(userInfo, year, semester);
+  const name = hasThaiText(current.name) ? current.name : registrationStudent.name || current.name || '';
+
+  return {
+    ...report,
+    student: {
+      ...current,
+      id: registrationStudent.id || current.id || '',
+      name,
+      faculty: studentProfile?.faculty || '',
+      department: studentProfile?.department || '',
+      semester: current.semester || registrationStudent.semester || '',
+      raw: current.raw || '',
+    },
+  };
+}
+
 export class RegistrarClient {
   constructor(fetchImpl = fetch, options = {}) {
     this.fetchImpl = fetchImpl;
@@ -219,6 +252,7 @@ export class RegistrarClient {
     this.cookies = new Map();
     this.semesterRowsCache = new Map();
     this.availableAcademicCache = new Map();
+    this.studentProfile = null;
     this.accessToken = '';
     this.userInfo = null;
     this.loggedIn = false;
@@ -228,6 +262,7 @@ export class RegistrarClient {
     this.cookies.clear();
     this.semesterRowsCache.clear();
     this.availableAcademicCache.clear();
+    this.studentProfile = null;
     this.accessToken = '';
     this.userInfo = null;
     this.loggedIn = false;
@@ -378,6 +413,23 @@ export class RegistrarClient {
     return rowsBySemester;
   }
 
+  async getStudentProfile() {
+    if (this.studentProfile) return this.studentProfile;
+    let profileUrl = STUDENT_PROFILE_URL;
+    const home = await this.text(STUDENT_HOME_URL).catch(() => null);
+    const discoveredUrl = home ? extractStudentProfileUrl(home.body) : '';
+    if (discoveredUrl) {
+      profileUrl = new URL(discoveredUrl, STUDENT_HOME_URL).toString();
+    }
+    const { body } = await this.text(profileUrl);
+    const profile = parseStudentProfile(body);
+    if (!profile.faculty && !profile.department) {
+      throw new Error('Registrar student profile did not include faculty or major.');
+    }
+    this.studentProfile = profile;
+    return profile;
+  }
+
   async getAvailableAcademicRows(currentYear, requestedYear) {
     const cacheKey = `${currentYear}:${requestedYear ?? ''}`;
     if (this.availableAcademicCache.has(cacheKey)) return this.availableAcademicCache.get(cacheKey);
@@ -389,7 +441,8 @@ export class RegistrarClient {
 
     const years = [...rowsByYear.entries()]
       .filter(([, rowsBySemester]) => [...rowsBySemester.values()].some((rows) => rows.length > 0))
-      .map(([year]) => year);
+      .map(([year]) => year)
+      .sort((a, b) => Number(b) - Number(a));
 
     const result = { years, rowsByYear };
     this.availableAcademicCache.set(cacheKey, result);
@@ -549,11 +602,14 @@ export class RegistrarClient {
       throw new Error('Not logged in.');
     }
 
-    if (this.accessToken && type === 'grade' && options.year && options.semester) {
-      return this.fetchLegacyReport(type, options);
+    if (this.accessToken && type === 'grade' && options.year && options.semester && !this.enableSemesterProbe) {
+      const studentProfile = await this.getStudentProfile().catch(() => null);
+      const gradeReport = await this.fetchLegacyReport(type, options);
+      return withPreferredStudentIdentity(gradeReport, this.userInfo, options.year, options.semester, studentProfile);
     }
 
     if (this.accessToken) {
+      const studentProfile = await this.getStudentProfile().catch(() => null);
       const current = await this.getYearSemesterNow();
       const year = options.year || current.YEAR;
       const semester = options.semester || current.SEMESTER;
@@ -597,8 +653,9 @@ export class RegistrarClient {
           year: effectiveYear,
           semester: effectiveSemester,
         });
+        const identifiedGradeReport = withPreferredStudentIdentity(gradeReport, this.userInfo, effectiveYear, effectiveSemester, studentProfile);
         return {
-          ...gradeReport,
+          ...identifiedGradeReport,
           options: {
             years: academicOptions.years,
             semesters: academicOptions.semesters,
@@ -612,8 +669,9 @@ export class RegistrarClient {
           semester: effectiveSemester,
         }).catch(() => null);
         if (legacyReport?.courses?.length) {
+          const identifiedLegacyReport = withPreferredStudentIdentity(legacyReport, this.userInfo, effectiveYear, effectiveSemester, studentProfile);
           return {
-            ...legacyReport,
+            ...identifiedLegacyReport,
             options: {
               years: academicOptions.years,
               semesters: academicOptions.semesters,
@@ -621,12 +679,13 @@ export class RegistrarClient {
           };
         }
 
-        return {
-          ...mapRegistrationStudyReport(registrationRows, {
+        const registrationStudyReport = mapRegistrationStudyReport(registrationRows, {
             userInfo: this.userInfo,
             year: effectiveYear,
             semester: effectiveSemester,
-          }),
+          });
+        return {
+          ...withPreferredStudentIdentity(registrationStudyReport, this.userInfo, effectiveYear, effectiveSemester, studentProfile),
           options: {
             years: academicOptions.years,
             semesters: academicOptions.semesters,
@@ -656,13 +715,15 @@ export class RegistrarClient {
               semester: effectiveSemester,
             }).catch(() => null);
             const enrichedRegistrationReport = enrichExamDetails(registrationReport, seatReport, legacyReport);
-            return {
+            const identifiedRegistrationReport = withPreferredStudentIdentity({
               ...enrichedRegistrationReport,
               student: {
-                ...enrichedRegistrationReport.student,
                 ...legacyReport.student,
                 semester: enrichedRegistrationReport.student.semester || legacyReport.student.semester,
               },
+            }, this.userInfo, effectiveYear, effectiveSemester, studentProfile);
+            return {
+              ...identifiedRegistrationReport,
               options: {
                 years: academicOptions.years,
                 semesters: academicOptions.semesters,
@@ -674,8 +735,9 @@ export class RegistrarClient {
             };
           }
 
+          const identifiedLegacyReport = withPreferredStudentIdentity(legacyReport, this.userInfo, effectiveYear, effectiveSemester, studentProfile);
           return {
-            ...legacyReport,
+            ...identifiedLegacyReport,
             options: {
               years: academicOptions.years,
               semesters: academicOptions.semesters,
@@ -688,7 +750,7 @@ export class RegistrarClient {
         }
 
         return {
-          ...registrationReport,
+          ...withPreferredStudentIdentity(registrationReport, this.userInfo, effectiveYear, effectiveSemester, studentProfile),
           options: {
             years: academicOptions.years,
             semesters: academicOptions.semesters,
@@ -702,7 +764,9 @@ export class RegistrarClient {
       throw new Error(`Unknown report type: ${type}`);
     }
 
-    return this.fetchLegacyReport(type, options);
+    const studentProfile = await this.getStudentProfile().catch(() => null);
+    const legacyReport = await this.fetchLegacyReport(type, options);
+    return withPreferredStudentIdentity(legacyReport, this.userInfo, options.year, options.semester, studentProfile);
   }
 
   async fetchLegacyReport(type, options = {}) {

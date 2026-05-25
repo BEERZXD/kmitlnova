@@ -1,8 +1,8 @@
 import type { ApiOption, StudentInfo } from './types';
 
 export const UNIVERSITY_TH = 'สถาบันเทคโนโลยีพระจอมเกล้าเจ้าคุณทหารลาดกระบัง';
-const FACULTY_ENGINEERING_TH = 'คณะวิศวกรรมศาสตร์';
-const EE_MAJOR_TH = 'ภาควิชา วิศวกรรมไฟฟ้า สาขาวิชา วิศวกรรมไฟฟ้า';
+const FACULTY_FOOD_TH = '\u0e04\u0e13\u0e30\u0e2d\u0e38\u0e15\u0e2a\u0e32\u0e2b\u0e01\u0e23\u0e23\u0e21\u0e2d\u0e32\u0e2b\u0e32\u0e23';
+const FOOD_PROCESS_MAJOR_TH = '\u0e2a\u0e32\u0e02\u0e32\u0e27\u0e34\u0e0a\u0e32 \u0e27\u0e34\u0e28\u0e27\u0e01\u0e23\u0e23\u0e21\u0e41\u0e1b\u0e23\u0e23\u0e39\u0e1b\u0e2d\u0e32\u0e2b\u0e32\u0e23';
 
 export const subjectPalette = [
   ['#3b82f6', '#eff6ff', '#1e3a8a'],
@@ -60,6 +60,7 @@ const thaiDayAbbrev: Record<string, string> = {
 const thaiMonths = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
 
 export const studyDayOrder = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const TH_MAJOR_LABEL = '\u0e2a\u0e32\u0e02\u0e32\u0e27\u0e34\u0e0a\u0e32';
 
 export function studyDayLabel(value: string) {
   return studyDays[value] ?? { key: value, short: value, full: value };
@@ -85,14 +86,16 @@ function titleCardUniversity(value?: string) {
 
 function titleCardFaculty(value?: string) {
   const text = String(value ?? '').trim();
-  if (/^Faculty of Engineering$/i.test(text)) return FACULTY_ENGINEERING_TH;
-  return text;
+  if (!/[\u0e00-\u0e7f]/.test(text)) return '';
+  return text.replace(/^คณะ\s+/, 'คณะ');
 }
 
 function titleCardDepartment(value?: string) {
   const text = String(value ?? '').trim();
-  if (/^Bachelor of Engineering Programme in Electrical Engineering$/i.test(text)) return EE_MAJOR_TH;
-  return text;
+  if (!/[\u0e00-\u0e7f]/.test(text)) return '';
+  const majorMatch = text.match(new RegExp(`${TH_MAJOR_LABEL}\\s*(.+)$`));
+  if (!majorMatch) return text;
+  return `${TH_MAJOR_LABEL} ${majorMatch[1].trim()}`;
 }
 
 function titleCardName(student: StudentInfo) {
@@ -102,12 +105,16 @@ function titleCardName(student: StudentInfo) {
 }
 
 export function normalizeTitleCardStudent(student: StudentInfo): StudentInfo {
+  const department = titleCardDepartment(student.department);
+  const faculty = titleCardFaculty(student.faculty);
+  const hasKnownMismatch = department === FOOD_PROCESS_MAJOR_TH && faculty !== FACULTY_FOOD_TH;
+
   return {
     ...student,
     name: titleCardName(student),
     university: titleCardUniversity(student.university),
-    faculty: titleCardFaculty(student.faculty),
-    department: titleCardDepartment(student.department),
+    faculty: hasKnownMismatch ? '' : faculty,
+    department: hasKnownMismatch ? '' : department,
   };
 }
 

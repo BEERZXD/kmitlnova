@@ -109,7 +109,7 @@ export function ExamView({ report }: { report: ExamReport }) {
           </div>
         </div>
       ) : (
-        <div className="kpm-empty">No scheduled exams found for this selection.</div>
+        <div className="kpm-empty">ไม่พบตารางสอบในภาคการศึกษานี้</div>
       )}
 
       {tba.length ? (

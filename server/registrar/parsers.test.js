@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   parseExamReport,
   parseGradeReport,
+  parseStudentProfile,
   parseStudyReport,
 } from './parsers.js';
 
@@ -50,6 +51,22 @@ const gradeHtml = `
 </table>`;
 
 describe('registrar report parsers', () => {
+  it('parses raw Thai faculty and major from the student profile page', () => {
+    const profileHtml = `
+      <table>
+        <tr><td>สถานภาพนักศึกษา</td><td>เรียน</td></tr>
+        <tr><td>คณะ</td><td>วิศวกรรมศาสตร์</td></tr>
+        <tr><td>ภาควิชา</td><td>วิศวกรรมไฟฟ้า</td></tr>
+        <tr><td>สาขาวิชา</td><td>วิศวกรรมไฟฟ้า</td></tr>
+      </table>`;
+
+    expect(parseStudentProfile(profileHtml)).toEqual({
+      faculty: 'คณะวิศวกรรมศาสตร์',
+      department: 'สาขาวิชา วิศวกรรมไฟฟ้า',
+      rawDepartment: 'ภาควิชา วิศวกรรมไฟฟ้า สาขาวิชา วิศวกรรมไฟฟ้า',
+    });
+  });
+
   it('parses study courses with multiple time slots and rooms', () => {
     const result = parseStudyReport(studyHtml);
 
@@ -188,7 +205,7 @@ describe('registrar report parsers', () => {
 
     expect(study.student).toMatchObject({
       faculty: 'คณะวิศวกรรมศาสตร์',
-      department: 'ภาควิชา วิศวกรรมไฟฟ้า สาขาวิชา วิศวกรรมไฟฟ้า',
+      department: 'สาขาวิชา วิศวกรรมไฟฟ้า',
       semester: '2/2568',
       id: '67010388',
       name: 'นายธนธรณ์ เทพสำเริง',
@@ -203,10 +220,42 @@ describe('registrar report parsers', () => {
     expect(grade.student).toMatchObject({
       university: 'สถาบันเทคโนโลยีพระจอมเกล้าเจ้าคุณทหารลาดกระบัง',
       faculty: 'คณะวิศวกรรมศาสตร์',
-      department: 'ภาควิชา วิศวกรรมไฟฟ้า สาขาวิชา วิศวกรรมไฟฟ้า',
+      department: 'สาขาวิชา วิศวกรรมไฟฟ้า',
       name: 'นายธนธรณ์ เทพสำเริง',
     });
     expect(grade.summary.map((item) => item.title)).toEqual(['Semester', 'Pre-Semester', 'Cumulation']);
     expect(grade.notes.join(' ')).toContain('หมายเหตุ');
+  });
+
+  it('normalizes Food Industry English legacy identity to Thai major-only fields', () => {
+    const html = `
+      <table>
+        <tr><td colspan="7">Faculty of Food Industry</td></tr>
+        <tr><td colspan="7">ID: 66070001 Name: FRIEND ACCOUNT</td></tr>
+        <tr><td colspan="7">Department: --> Major: Bachelor of Science Program in Food Process Engineering Semester/Year : 1/2568</td></tr>
+        <tr><td>No.</td><td>Course No.</td><td>Course Title</td><td>Section</td><td>Credit</td><td>Type</td><td>Grade</td></tr>
+      </table>`;
+
+    expect(parseGradeReport(html).student).toMatchObject({
+      faculty: 'คณะอุตสาหกรรมอาหาร',
+      department: 'สาขาวิชา วิศวกรรมแปรรูปอาหาร',
+      semester: '1/2568',
+    });
+  });
+
+  it('repairs mismatched legacy faculty when the major is Food Process Engineering', () => {
+    const html = `
+      <table>
+        <tr><td colspan="7">Faculty of Information Technology</td></tr>
+        <tr><td colspan="7">ID: 65080000 Name: FRIEND ACCOUNT</td></tr>
+        <tr><td colspan="7">Department: --> Major: Bachelor of Science Programme in Food Process Engineering Semester/Year : 1/2568</td></tr>
+        <tr><td>No.</td><td>Course No.</td><td>Course Title</td><td>Section</td><td>Credit</td><td>Type</td><td>Grade</td></tr>
+      </table>`;
+
+    expect(parseGradeReport(html).student).toMatchObject({
+      faculty: 'คณะอุตสาหกรรมอาหาร',
+      department: 'สาขาวิชา วิศวกรรมแปรรูปอาหาร',
+      semester: '1/2568',
+    });
   });
 });
