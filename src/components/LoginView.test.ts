@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getLoginImageClassName, isLoginSubmitKey, parseLoginImageList } from './LoginView';
+import { getLoginImageClassName, getRenderableLoginImageIndexes, isLoginSubmitKey, parseLoginImageList } from './LoginView';
 
 describe('parseLoginImageList', () => {
   it('uses non-empty non-comment lines as login image sources with default framing', () => {
@@ -31,6 +31,20 @@ describe('getLoginImageClassName', () => {
   it('only marks the visible image as active so the carousel just crossfades', () => {
     expect(getLoginImageClassName(0, 0)).toBe('login-visual-image active');
     expect(getLoginImageClassName(1, 0)).toBe('login-visual-image inactive');
+  });
+});
+
+describe('getRenderableLoginImageIndexes', () => {
+  it('renders only the active image and the next image before anything is loaded', () => {
+    expect(getRenderableLoginImageIndexes(5, 0, new Set())).toEqual([0, 1]);
+  });
+
+  it('keeps loaded images mounted while adding the next not-yet-loaded image', () => {
+    expect(getRenderableLoginImageIndexes(5, 1, new Set([0, 1]))).toEqual([0, 1, 2]);
+  });
+
+  it('wraps the next image without duplicating already loaded images', () => {
+    expect(getRenderableLoginImageIndexes(5, 4, new Set([0, 1, 4]))).toEqual([0, 1, 4]);
   });
 });
 

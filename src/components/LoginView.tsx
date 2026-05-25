@@ -53,6 +53,28 @@ export function getLoginImageClassName(
   return 'login-visual-image inactive';
 }
 
+export function getNextLoginImageIndex(imageCount: number, activeLoginImageIndex: number) {
+  if (imageCount < 2) return activeLoginImageIndex;
+  return (activeLoginImageIndex + 1) % imageCount;
+}
+
+export function getRenderableLoginImageIndexes(
+  imageCount: number,
+  activeLoginImageIndex: number,
+  loadedImageIndexes: Iterable<number>,
+) {
+  if (imageCount <= 0) return [];
+
+  const indexes = new Set<number>();
+  for (const imageIndex of loadedImageIndexes) {
+    if (imageIndex >= 0 && imageIndex < imageCount) indexes.add(imageIndex);
+  }
+  indexes.add(activeLoginImageIndex);
+  indexes.add(getNextLoginImageIndex(imageCount, activeLoginImageIndex));
+
+  return [...indexes].sort((a, b) => a - b);
+}
+
 export function isLoginSubmitKey(event: Pick<KeyboardEvent, 'key' | 'shiftKey' | 'isComposing'>) {
   return event.key === 'Enter' && !event.shiftKey && !event.isComposing;
 }
@@ -68,6 +90,7 @@ export function LoginView({ error, isLoading, onSubmit }: LoginViewProps) {
   const [password, setPassword] = useState('');
   const [loginImages, setLoginImages] = useState(fallbackLoginImages);
   const [activeLoginImageIndex, setActiveLoginImageIndex] = useState(0);
+  const [loadedLoginImageIndexes, setLoadedLoginImageIndexes] = useState<Set<number>>(() => new Set());
 
   useEffect(() => {
     let isActive = true;
@@ -79,11 +102,13 @@ export function LoginView({ error, isLoading, onSubmit }: LoginViewProps) {
         const configuredImages = parseLoginImageList(text);
         setLoginImages(configuredImages.length > 0 ? configuredImages : fallbackLoginImages);
         setActiveLoginImageIndex(0);
+        setLoadedLoginImageIndexes(new Set());
       })
       .catch(() => {
         if (!isActive) return;
         setLoginImages(fallbackLoginImages);
         setActiveLoginImageIndex(0);
+        setLoadedLoginImageIndexes(new Set());
       });
 
     return () => {
@@ -117,19 +142,42 @@ export function LoginView({ error, isLoading, onSubmit }: LoginViewProps) {
     await submitLogin();
   }
 
+  const nextLoginImageIndex = getNextLoginImageIndex(loginImages.length, activeLoginImageIndex);
+  const renderedLoginImageIndexes = getRenderableLoginImageIndexes(
+    loginImages.length,
+    activeLoginImageIndex,
+    loadedLoginImageIndexes,
+  );
+
   return (
     <main className="login-page">
       <div className="login-layout">
         <section className="login-visual" aria-hidden="true">
-          {loginImages.map((image, imageIndex) => (
-            <img
-              key={`${image.src}-${imageIndex}`}
-              className={getLoginImageClassName(imageIndex, activeLoginImageIndex)}
-              src={image.src}
-              style={{ objectPosition: image.objectPosition }}
-              alt=""
-            />
-          ))}
+          {renderedLoginImageIndexes.map((imageIndex) => {
+            const image = loginImages[imageIndex];
+            const shouldEagerLoad = imageIndex === activeLoginImageIndex || imageIndex === nextLoginImageIndex;
+
+            return (
+              <img
+                key={`${image.src}-${imageIndex}`}
+                className={getLoginImageClassName(imageIndex, activeLoginImageIndex)}
+                src={image.src}
+                style={{ objectPosition: image.objectPosition }}
+                loading={shouldEagerLoad ? 'eager' : 'lazy'}
+                decoding="async"
+                fetchPriority={imageIndex === activeLoginImageIndex ? 'high' : 'low'}
+                onLoad={() => {
+                  setLoadedLoginImageIndexes((current) => {
+                    if (current.has(imageIndex)) return current;
+                    const next = new Set(current);
+                    next.add(imageIndex);
+                    return next;
+                  });
+                }}
+                alt=""
+              />
+            );
+          })}
         </section>
 
         <section className="login-form-column">
