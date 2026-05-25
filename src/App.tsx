@@ -341,7 +341,7 @@ export default function App() {
       onLogout={() => void handleLogout()}
       isExporting={isExporting}
     >
-      <Suspense fallback={<EmptyState state="loading" title="กำลังโหลดข้อมูลทะเบียน" detail="กำลังโหลดส่วนติดต่อผู้ใช้" />}>
+      <Suspense fallback={<EmptyState state="loading" title="กำลังโหลดข้อมูลทะเบียน" detail="กำลังดึงข้อมูลจาก KMITL" />}>
         <div ref={exportRef} className={`report-content-area${loading ? ' report-content-loading' : ''}`}>
           {loading && !activeReport ? (
             <EmptyState state="loading" title="กำลังโหลดข้อมูลทะเบียน" detail="กำลังดึงข้อมูลจาก KMITL" />
