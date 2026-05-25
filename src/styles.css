@@ -1155,6 +1155,17 @@ button:disabled {
     margin-top: 20px;
   }
 
+  /* Safari WebKit artifact fix for live mobile views: 
+     Disable box shadows on major containers to prevent right-border grey clipping bug on iOS */
+  .kpm-grid,
+  .kpm-tba-container,
+  .kpm-info-card,
+  .kpm-grade-container,
+  .kpm-summary-container,
+  .kpm-empty {
+    box-shadow: none !important;
+  }
+
   .credential-note {
     margin-top: 14px;
     font-size: 12px;
