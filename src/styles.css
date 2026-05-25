@@ -509,12 +509,6 @@ button:disabled {
   z-index: 2;
 }
 
-.login-page {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-
 /* Professional Post-Login Transition */
 .login-page.professional-animating {
   pointer-events: none;
