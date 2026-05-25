@@ -1,16 +1,15 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { toJpeg } from 'html-to-image';
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import { fetchReport, getSession, login as loginRequest, logout as logoutRequest } from './api';
-import { AppShell } from './components/AppShell';
 import { EmptyState } from './components/EmptyState';
-import { ExamView } from './components/ExamView';
-import { GradeView } from './components/GradeView';
 import { LoginView } from './components/LoginView';
-import { StudyView } from './components/StudyView';
 import { buildExportImageOptions, createCenteredExportNode } from './exportImage';
 import type { ApiOption, ReportData, ReportParams, ReportType } from './types';
 
 const initialTab: ReportType = 'study';
+const AppShell = lazy(() => import('./components/AppShell').then((module) => ({ default: module.AppShell })));
+const StudyView = lazy(() => import('./components/StudyView').then((module) => ({ default: module.StudyView })));
+const ExamView = lazy(() => import('./components/ExamView').then((module) => ({ default: module.ExamView })));
+const GradeView = lazy(() => import('./components/GradeView').then((module) => ({ default: module.GradeView })));
 
 type TitleIdentity = {
   faculty: string;
@@ -235,6 +234,7 @@ export default function App() {
 
     setIsExporting(true);
     try {
+      const { toJpeg } = await import('html-to-image');
       const capture = createCenteredExportNode(node);
       let dataUrl: string;
       try {
@@ -315,7 +315,8 @@ export default function App() {
   }
 
   return (
-    <AppShell
+    <Suspense fallback={<EmptyState state="loading" title="กำลังโหลดข้อมูลทะเบียน" detail="กำลังดึงข้อมูลจาก KMITL" />}>
+      <AppShell
       active={active}
       isLoading={loading}
       semesterOptions={semesterOptions}
@@ -331,8 +332,8 @@ export default function App() {
       onExport={() => void handleExport()}
       onLogout={() => void handleLogout()}
       isExporting={isExporting}
-    >
-      <div ref={exportRef}>
+      >
+        <div ref={exportRef}>
         {loading && !activeReport ? (
           <EmptyState state="loading" title="กำลังโหลดข้อมูลทะเบียน" detail="กำลังดึงข้อมูลจาก KMITL" />
         ) : error ? (
@@ -346,7 +347,8 @@ export default function App() {
         ) : (
           <EmptyState state="empty" title="ข้อมูลยังไม่ถูกโหลด" detail="เลือกรายการที่ต้องการเพื่อโหลดข้อมูล" />
         )}
-      </div>
-    </AppShell>
+        </div>
+      </AppShell>
+    </Suspense>
   );
 }

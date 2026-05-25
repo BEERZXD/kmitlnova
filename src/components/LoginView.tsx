@@ -3,11 +3,14 @@ import { LockKeyhole, LogIn, UserRound } from 'lucide-react';
 import { AppFooter } from './AppFooter';
 
 const kmitlLogoUrl = 'https://www.kmitl.ac.th/themes/custom/kmitl/logo.svg';
-const loginImageUrl = '/login-bg.jpg';
 const loginImagesConfigUrl = '/login-images.txt';
 const loginImageCycleMs = 5000;
 const defaultLoginImagePosition = '50% 50%';
-const fallbackLoginImages = [{ src: loginImageUrl, objectPosition: defaultLoginImagePosition }];
+const defaultLoginImage = {
+  src: 'https://www.kmitl.ac.th/sites/default/files/2025-05/75625360_2708828382511763_3205029120262012928_n.jpg',
+  objectPosition: '50% 75%',
+};
+const fallbackLoginImages = [defaultLoginImage];
 
 type LoginImageEntry = {
   src: string;
@@ -62,6 +65,7 @@ export function getRenderableLoginImageIndexes(
   imageCount: number,
   activeLoginImageIndex: number,
   loadedImageIndexes: Iterable<number>,
+  shouldRenderNextImage = false,
 ) {
   if (imageCount <= 0) return [];
 
@@ -70,7 +74,9 @@ export function getRenderableLoginImageIndexes(
     if (imageIndex >= 0 && imageIndex < imageCount) indexes.add(imageIndex);
   }
   indexes.add(activeLoginImageIndex);
-  indexes.add(getNextLoginImageIndex(imageCount, activeLoginImageIndex));
+  if (shouldRenderNextImage) {
+    indexes.add(getNextLoginImageIndex(imageCount, activeLoginImageIndex));
+  }
 
   return [...indexes].sort((a, b) => a - b);
 }
@@ -91,6 +97,7 @@ export function LoginView({ error, isLoading, onSubmit }: LoginViewProps) {
   const [loginImages, setLoginImages] = useState(fallbackLoginImages);
   const [activeLoginImageIndex, setActiveLoginImageIndex] = useState(0);
   const [loadedLoginImageIndexes, setLoadedLoginImageIndexes] = useState<Set<number>>(() => new Set());
+  const [shouldRenderNextLoginImage, setShouldRenderNextLoginImage] = useState(false);
 
   useEffect(() => {
     let isActive = true;
@@ -103,18 +110,42 @@ export function LoginView({ error, isLoading, onSubmit }: LoginViewProps) {
         setLoginImages(configuredImages.length > 0 ? configuredImages : fallbackLoginImages);
         setActiveLoginImageIndex(0);
         setLoadedLoginImageIndexes(new Set());
+        setShouldRenderNextLoginImage(false);
       })
       .catch(() => {
         if (!isActive) return;
         setLoginImages(fallbackLoginImages);
         setActiveLoginImageIndex(0);
         setLoadedLoginImageIndexes(new Set());
+        setShouldRenderNextLoginImage(false);
       });
 
     return () => {
       isActive = false;
     };
   }, []);
+
+  useEffect(() => {
+    let timeoutId: number | undefined;
+    let idleCallbackId: number | undefined;
+
+    if (typeof window.requestIdleCallback === 'function') {
+      idleCallbackId = window.requestIdleCallback(() => {
+        setShouldRenderNextLoginImage(true);
+      }, { timeout: 1500 });
+    } else {
+      timeoutId = window.setTimeout(() => {
+        setShouldRenderNextLoginImage(true);
+      }, 1200);
+    }
+
+    return () => {
+      if (idleCallbackId !== undefined && typeof window.cancelIdleCallback === 'function') {
+        window.cancelIdleCallback(idleCallbackId);
+      }
+      if (timeoutId !== undefined) window.clearTimeout(timeoutId);
+    };
+  }, [loginImages]);
 
   useEffect(() => {
     if (loginImages.length < 2) return;
@@ -142,11 +173,11 @@ export function LoginView({ error, isLoading, onSubmit }: LoginViewProps) {
     await submitLogin();
   }
 
-  const nextLoginImageIndex = getNextLoginImageIndex(loginImages.length, activeLoginImageIndex);
   const renderedLoginImageIndexes = getRenderableLoginImageIndexes(
     loginImages.length,
     activeLoginImageIndex,
     loadedLoginImageIndexes,
+    shouldRenderNextLoginImage,
   );
 
   return (
@@ -155,7 +186,7 @@ export function LoginView({ error, isLoading, onSubmit }: LoginViewProps) {
         <section className="login-visual" aria-hidden="true">
           {renderedLoginImageIndexes.map((imageIndex) => {
             const image = loginImages[imageIndex];
-            const shouldEagerLoad = imageIndex === activeLoginImageIndex || imageIndex === nextLoginImageIndex;
+            const shouldEagerLoad = imageIndex === activeLoginImageIndex;
 
             return (
               <img
@@ -173,6 +204,9 @@ export function LoginView({ error, isLoading, onSubmit }: LoginViewProps) {
                     next.add(imageIndex);
                     return next;
                   });
+                  if (imageIndex === activeLoginImageIndex) {
+                    setShouldRenderNextLoginImage(true);
+                  }
                 }}
                 alt=""
               />

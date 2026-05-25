@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
   applyTitleIdentityToReports,
@@ -7,6 +8,8 @@ import {
   titleIdentityFromReport,
 } from './App';
 import type { ReportData } from './types';
+
+const appSource = readFileSync(new URL('./App.tsx', import.meta.url), 'utf8');
 
 const studyReport = {
   type: 'study',
@@ -118,5 +121,19 @@ describe('tab report loading', () => {
       study: studyReport,
       grade: undefined,
     });
+  });
+});
+
+describe('startup bundle boundaries', () => {
+  it('loads html-to-image only when export is requested', () => {
+    expect(appSource).not.toContain("import { toJpeg } from 'html-to-image'");
+    expect(appSource).toContain("await import('html-to-image')");
+  });
+
+  it('lazy-loads authenticated report views outside the login startup path', () => {
+    expect(appSource).toContain("lazy(() => import('./components/AppShell')");
+    expect(appSource).toContain("lazy(() => import('./components/StudyView')");
+    expect(appSource).toContain("lazy(() => import('./components/ExamView')");
+    expect(appSource).toContain("lazy(() => import('./components/GradeView')");
   });
 });

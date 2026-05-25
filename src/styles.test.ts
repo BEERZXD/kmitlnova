@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const css = readFileSync(new URL('./styles.css', import.meta.url), 'utf8');
+const indexHtml = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const appShell = readFileSync(new URL('./components/AppShell.tsx', import.meta.url), 'utf8');
 const gradeView = readFileSync(new URL('./components/GradeView.tsx', import.meta.url), 'utf8');
 const loginView = readFileSync(new URL('./components/LoginView.tsx', import.meta.url), 'utf8');
@@ -116,8 +117,17 @@ describe('report styling contracts', () => {
     expect(css).toContain('content: none');
   });
 
-  it('uses a split login layout with a local image panel', () => {
-    expect(loginView).toContain("const loginImageUrl = '/login-bg.jpg';");
+  it('uses a split login layout with a remote KMITL image panel', () => {
+    const firstConfiguredImage = readFileSync(loginImagesFile, 'utf8')
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line && !line.startsWith('#'))[0]
+      .split('|')[0]
+      .trim();
+
+    expect(firstConfiguredImage).toContain('https://www.kmitl.ac.th/');
+    expect(loginView).toContain(firstConfiguredImage);
+    expect(loginView).not.toContain("'/login-bg.jpg'");
     expect(loginView).toContain("const loginImagesConfigUrl = '/login-images.txt';");
     expect(loginView).toContain('const loginImageCycleMs = 5000;');
     expect(loginView).toContain('fetch(loginImagesConfigUrl');
@@ -162,6 +172,14 @@ describe('report styling contracts', () => {
     expect(css).toContain('grid-template-columns: 1fr');
     expect(css).toContain('grid-template-rows: minmax(96px, 28%) minmax(0, 1fr)');
     expect(css).toContain('height: auto');
+  });
+
+  it('loads Kanit from index.html with early connection hints instead of CSS import', () => {
+    expect(css).not.toContain('@import');
+    expect(indexHtml).toContain('rel="preconnect" href="https://fonts.googleapis.com"');
+    expect(indexHtml).toContain('rel="preconnect" href="https://fonts.gstatic.com" crossorigin');
+    expect(indexHtml).toContain('rel="preconnect" href="https://www.kmitl.ac.th"');
+    expect(indexHtml).toContain('https://fonts.googleapis.com/css2?family=Kanit');
   });
 
   it('provides a public login image list and allows remote HTTPS image links', () => {
