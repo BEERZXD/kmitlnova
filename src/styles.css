@@ -398,6 +398,8 @@ button:disabled {
 .kpm-scroll-surface {
   width: 100%;
   overflow-x: auto;
+  padding: 4px;
+  margin: -4px;
 }
 
 .kpm-info-card {
@@ -484,6 +486,8 @@ button:disabled {
   overflow: hidden;
   min-height: 420px;
   min-width: 1040px;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
 }
 
 .kpm-exam-grid {
