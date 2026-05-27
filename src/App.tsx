@@ -1,4 +1,5 @@
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
+import { Analytics } from '@vercel/analytics/react';
 import { fetchReport, getSession, login as loginRequest, logout as logoutRequest } from './api';
 import { EmptyState } from './components/EmptyState';
 import { LoginView } from './components/LoginView';
@@ -365,6 +366,7 @@ export default function App() {
           ) : null}
         </div>
       </Suspense>
+      <Analytics />
     </AppShell>
   );
 }
