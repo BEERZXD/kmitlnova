@@ -12,6 +12,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@vercel/analytics": "^2.0.1",
     "@vitejs/plugin-react": "^5.0.0",
     "concurrently": "^9.2.1",
     "html-to-image": "^1.11.13",
