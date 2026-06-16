@@ -12,7 +12,6 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@fontsource/kanit": "^5.2.8",
     "@vitejs/plugin-react": "^5.0.0",
     "concurrently": "^9.2.1",
     "html-to-image": "^1.11.13",
