@@ -3,10 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="manifest" href="/manifest.json" />
     <link rel="preconnect" href="https://www.kmitl.ac.th" />
-    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet" crossorigin="anonymous" />
+    <link rel="preconnect" href="https://i.ibb.co" />
     <link rel="icon" type="image/svg+xml" href="https://www.kmitl.ac.th/themes/custom/kmitl/logo.svg" />
     <title>KMITL Nova</title>
     <meta name="description" content="ระบบตรวจสอบข้อมูลการเรียน สจล. แบบเรียบง่าย" />
@@ -23,5 +22,13 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').catch(err => console.error('SW registration failed:', err));
+        });
+      }
+    </script>
+    <!-- Cloudflare Web Analytics --><script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "14592f4142aa455c95ec6e407f7d2f31"}'></script><!-- End Cloudflare Web Analytics -->
   </body>
 </html>

@@ -9,4 +9,15 @@ export default defineConfig({
       '/api': 'http://127.0.0.1:8787',
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            return 'vendor';
+          }
+        }
+      }
+    }
+  }
 });

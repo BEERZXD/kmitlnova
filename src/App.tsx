@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
-import { Analytics } from '@vercel/analytics/react';
+
 import { fetchReport, getSession, login as loginRequest, logout as logoutRequest } from './api';
 import { EmptyState } from './components/EmptyState';
 import { LoginView } from './components/LoginView';
@@ -109,6 +109,7 @@ export default function App() {
 
   const [loginError, setLoginError] = useState('');
   const [active, setActive] = useState<ReportType>(initialTab);
+  const activeRef = useRef<ReportType>(initialTab);
   const [reports, setReports] = useState<Partial<Record<ReportType, ReportData>>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -120,6 +121,7 @@ export default function App() {
   const [savedExamKindOptions, setSavedExamKindOptions] = useState<ApiOption[]>([]);
   const [titleIdentity, setTitleIdentity] = useState<TitleIdentity | null>(null);
   const exportRef = useRef<HTMLDivElement>(null);
+  const inflightRequests = useRef<Set<ReportType>>(new Set());
 
   const activeReport = reports[active];
   const semesterOptions = optionsFor(activeReport, 'semesters').length ? optionsFor(activeReport, 'semesters') : savedSemesterOptions;
@@ -134,12 +136,15 @@ export default function App() {
     examKind: active === 'exam' && selectedExamKind ? selectedExamKind : undefined,
   }), [active, selectedExamKind, selectedSemester, selectedYear]);
 
-  async function loadReport(type: ReportType, force = false, overrideParams?: ReportParams) {
+  async function loadReport(type: ReportType, force = false, overrideParams?: ReportParams, silent = false) {
     if (!loggedIn) return;
     if (!force && reports[type]) return;
 
-    setLoading(true);
-    setError('');
+    if (!silent) setLoading(true);
+    if (inflightRequests.current.has(type)) return;
+
+    inflightRequests.current.add(type);
+    if (!silent) setError('');
     try {
       const data = await fetchReport(type, getReportLoadParams({
         semester: selectedSemester,
@@ -171,7 +176,8 @@ export default function App() {
       }
       setError(message);
     } finally {
-      setLoading(false);
+      inflightRequests.current.delete(type);
+      if (type === activeRef.current) setLoading(false);
     }
   }
 
@@ -189,10 +195,15 @@ export default function App() {
     if (type === active) return;
     setLoading(true);
     setActive(type);
+    activeRef.current = type;
     setError('');
     if (type !== 'exam') setSelectedExamKind('');
     if (type !== 'exam') setSavedExamKindOptions([]);
     setReports((current) => clearReportForTab(current, type));
+  }
+
+  function handleTabPrefetch(type: ReportType) {
+    void loadReport(type, false, undefined, true);
   }
 
   async function handleLogin(studentId: string, password: string) {
@@ -335,6 +346,7 @@ export default function App() {
       selectedYear={selectedYear}
       selectedExamKind={selectedExamKind}
       onTabChange={handleTabChange}
+      onTabPrefetch={handleTabPrefetch}
       onSemesterChange={(value) => handleSelectionChange({ semester: value })}
       onYearChange={(value) => handleSelectionChange({ year: value })}
       onExamKindChange={(value) => handleSelectionChange({ examKind: value })}
@@ -366,7 +378,6 @@ export default function App() {
           ) : null}
         </div>
       </Suspense>
-      <Analytics />
     </AppShell>
   );
 }

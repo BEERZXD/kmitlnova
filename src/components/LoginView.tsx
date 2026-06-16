@@ -1,4 +1,4 @@
-import { FormEvent, KeyboardEvent, useEffect, useState } from 'react';
+﻿import { FormEvent, KeyboardEvent, useEffect, useState } from 'react';
 import { LockKeyhole, LogIn, UserRound } from 'lucide-react';
 import { AppFooter } from './AppFooter';
 
@@ -7,7 +7,7 @@ const loginImagesConfigUrl = '/login-images.txt';
 const loginImageCycleMs = 5000;
 const defaultLoginImagePosition = '50% 50%';
 const defaultLoginImage = {
-  src: 'https://www.kmitl.ac.th/sites/default/files/2025-05/75625360_2708828382511763_3205029120262012928_n.jpg',
+  src: 'https://i.ibb.co/Q7DCbnLb/922885a5670a.jpg',
   objectPosition: '50% 75%',
 };
 const fallbackLoginImages = [defaultLoginImage];

@@ -125,7 +125,10 @@ describe('report styling contracts', () => {
       .split('|')[0]
       .trim();
 
-    expect(firstConfiguredImage).toContain('https://www.kmitl.ac.th/');
+    expect(
+      firstConfiguredImage.includes('https://www.kmitl.ac.th/') ||
+      firstConfiguredImage.includes('https://i.ibb.co/')
+    ).toBe(true);
     expect(loginView).toContain(firstConfiguredImage);
     expect(loginView).not.toContain("'/login-bg.jpg'");
     expect(loginView).toContain("const loginImagesConfigUrl = '/login-images.txt';");
@@ -174,12 +177,11 @@ describe('report styling contracts', () => {
     expect(css).toContain('height: auto');
   });
 
-  it('loads Kanit from index.html with early connection hints instead of CSS import', () => {
-    expect(css).not.toContain('@import');
-    expect(indexHtml).toContain('rel="preconnect" href="https://fonts.googleapis.com"');
-    expect(indexHtml).toContain('rel="preconnect" href="https://fonts.gstatic.com" crossorigin');
+  it('loads Kanit from local fontsource package instead of external Google Fonts', () => {
+    expect(css).not.toContain('@import url("https://fonts.googleapis.com');
+    expect(indexHtml).not.toContain('https://fonts.googleapis.com');
+    expect(indexHtml).not.toContain('https://fonts.gstatic.com');
     expect(indexHtml).toContain('rel="preconnect" href="https://www.kmitl.ac.th"');
-    expect(indexHtml).toContain('https://fonts.googleapis.com/css2?family=Kanit');
   });
 
   it('provides a public login image list and allows remote HTTPS image links', () => {

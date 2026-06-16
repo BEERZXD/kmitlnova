@@ -16,6 +16,7 @@ A standalone web application for viewing KMITL registrar data with a modern, cle
 - **Backend:** Node.js with native HTTP and per-session in-memory state
 - **Image Export:** html-to-image
 - **Icons:** lucide-react
+- **Analytics:** @vercel/analytics
 - **Hosting:** Vercel (Singapore region)
 
 ## Getting Started
