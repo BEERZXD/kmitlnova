@@ -187,6 +187,15 @@ export default function App() {
       .catch(() => {});
   }, []);
 
+  // Warm up html-to-image font cache in the background so the first export has fonts
+  useEffect(() => {
+    if (loggedIn) {
+      import('html-to-image')
+        .then(({ getFontEmbedCSS }) => getFontEmbedCSS(document.body))
+        .catch(() => { /* ignore */ });
+    }
+  }, [loggedIn]);
+
   useEffect(() => {
     if (loggedIn) void loadReport(active);
   }, [active, loggedIn]);
