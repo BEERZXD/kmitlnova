@@ -48,6 +48,8 @@ export function getReportLoadParams(_currentSelection: SelectionValues, explicit
   return explicitParams ?? {};
 }
 
+let cachedFontEmbedCSS = '';
+
 export function getSelectionChangeState(current: SelectionValues, next: Partial<ReportParams>) {
   const yearChanged = next.year !== undefined && next.year !== current.year;
   const nextSelected = {
@@ -189,9 +191,10 @@ export default function App() {
 
   // Warm up html-to-image font cache in the background so the first export has fonts
   useEffect(() => {
-    if (loggedIn) {
+    if (loggedIn && !cachedFontEmbedCSS) {
       import('html-to-image')
         .then(({ getFontEmbedCSS }) => getFontEmbedCSS(document.body))
+        .then((css) => { cachedFontEmbedCSS = css; })
         .catch(() => { /* ignore */ });
     }
   }, [loggedIn]);
@@ -262,13 +265,18 @@ export default function App() {
       const capture = createCenteredExportNode(node);
       let dataUrl: string;
       try {
+        const options: any = buildExportImageOptions(capture.node);
+        if (cachedFontEmbedCSS) {
+          options.fontEmbedCSS = cachedFontEmbedCSS;
+        }
+
         // Wait one frame to let browser compute styles of offscreen clone
         await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
 
         // Warm up WebKit layout engine (double-call workaround for Safari iOS)
-        await toJpeg(capture.node, buildExportImageOptions(capture.node));
+        await toJpeg(capture.node, options);
         // Real capture
-        dataUrl = await toJpeg(capture.node, buildExportImageOptions(capture.node));
+        dataUrl = await toJpeg(capture.node, options);
       } finally {
         capture.cleanup();
       }
