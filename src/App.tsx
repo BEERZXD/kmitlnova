@@ -48,8 +48,6 @@ export function getReportLoadParams(_currentSelection: SelectionValues, explicit
   return explicitParams ?? {};
 }
 
-let cachedFontEmbedCSS = '';
-
 export function getSelectionChangeState(current: SelectionValues, next: Partial<ReportParams>) {
   const yearChanged = next.year !== undefined && next.year !== current.year;
   const nextSelected = {
@@ -189,15 +187,6 @@ export default function App() {
       .catch(() => {});
   }, []);
 
-  // Warm up html-to-image font cache in the background so the first export has fonts
-  useEffect(() => {
-    if (loggedIn && !cachedFontEmbedCSS) {
-      import('html-to-image')
-        .then(({ getFontEmbedCSS }) => getFontEmbedCSS(document.body))
-        .then((css) => { cachedFontEmbedCSS = css; })
-        .catch(() => { /* ignore */ });
-    }
-  }, [loggedIn]);
 
   useEffect(() => {
     if (loggedIn) void loadReport(active);
@@ -265,10 +254,7 @@ export default function App() {
       const capture = createCenteredExportNode(node);
       let dataUrl: string;
       try {
-        const options: any = buildExportImageOptions(capture.node);
-        if (cachedFontEmbedCSS) {
-          options.fontEmbedCSS = cachedFontEmbedCSS;
-        }
+        const options = buildExportImageOptions(capture.node);
 
         // Wait one frame to let browser compute styles of offscreen clone
         await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
