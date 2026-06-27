@@ -1,4 +1,4 @@
-﻿import { FormEvent, KeyboardEvent, useEffect, useState } from 'react';
+import { FormEvent, KeyboardEvent, useEffect, useState } from 'react';
 import { LockKeyhole, LogIn, UserRound } from 'lucide-react';
 import { AppFooter } from './AppFooter';
 
@@ -104,7 +104,7 @@ export function LoginView({ error, isLoading, onSubmit, onSuccess }: LoginViewPr
   useEffect(() => {
     let isActive = true;
 
-    fetch(loginImagesConfigUrl, { cache: 'no-store' })
+    fetch(loginImagesConfigUrl)
       .then((response) => (response.ok ? response.text() : ''))
       .then((text) => {
         if (!isActive) return;

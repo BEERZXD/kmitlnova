@@ -21,7 +21,6 @@ type AppShellProps = {
   selectedYear: string;
   selectedExamKind: string;
   onTabChange: (type: ReportType) => void;
-  onTabPrefetch: (type: ReportType) => void;
   onSemesterChange: (value: string) => void;
   onYearChange: (value: string) => void;
   onExamKindChange: (value: string) => void;
@@ -70,7 +69,6 @@ export function AppShell({
   selectedYear,
   selectedExamKind,
   onTabChange,
-  onTabPrefetch,
   onSemesterChange,
   onYearChange,
   onExamKindChange,
@@ -103,8 +101,6 @@ export function AppShell({
             className={active === tab.type ? 'tab active' : 'tab'}
             type="button"
             onClick={() => onTabChange(tab.type)}
-            onMouseEnter={() => onTabPrefetch(tab.type)}
-            onTouchStart={() => onTabPrefetch(tab.type)}
           >
             <span>{tab.label}</span>
             <small>{tab.sublabel}</small>

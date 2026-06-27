@@ -216,9 +216,6 @@ export default function App() {
     setReports((current) => clearReportForTab(current, type));
   }
 
-  function handleTabPrefetch(type: ReportType) {
-    void loadReport(type, false, undefined, true);
-  }
 
   async function handleLogin(studentId: string, password: string) {
     setLoginError('');
@@ -435,7 +432,6 @@ export default function App() {
       selectedYear={selectedYear}
       selectedExamKind={selectedExamKind}
       onTabChange={handleTabChange}
-      onTabPrefetch={handleTabPrefetch}
       onSemesterChange={(value) => handleSelectionChange({ semester: value })}
       onYearChange={(value) => handleSelectionChange({ year: value })}
       onExamKindChange={(value) => handleSelectionChange({ examKind: value })}
