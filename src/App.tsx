@@ -257,7 +257,7 @@ export default function App() {
     setSavedExamKindOptions([]);
   }
 
-  async function handleExport() {
+  async function handleExport(format: 'image' | 'pdf') {
     const node = exportRef.current?.querySelector('.export-target') as HTMLElement | null;
     if (!node) return;
 
@@ -280,11 +280,12 @@ export default function App() {
 
         const capture = createCenteredExportNode(node);
         let dataUrl: string;
+        let exportOptions: ReturnType<typeof buildExportImageOptions> & { fontEmbedCSS: string };
         try {
           // Wait one frame to let browser compute styles of offscreen clone
           await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
 
-          const exportOptions = {
+          exportOptions = {
             ...buildExportImageOptions(capture.node),
             fontEmbedCSS: kanitFontsCSS,
           };
@@ -300,45 +301,94 @@ export default function App() {
           });
         }
 
-        const fileName = `kmitl-nova-${active}.jpg`;
-        const [header, base64] = dataUrl.split(',');
-        const mime = header.match(/:(.*?);/)?.[1] ?? 'image/jpeg';
-        const binary = atob(base64);
-        const bytes = new Uint8Array(binary.length);
-        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-        const blob = new Blob([bytes], { type: mime });
+        if (format === 'pdf') {
+          const { jsPDF } = await import('jspdf');
+          
+          const pdfWidth = exportOptions.width;
+          const height = exportOptions.height;
+          const orientation = pdfWidth > height ? 'l' : 'p';
+          
+          const pdf = new jsPDF({
+            orientation,
+            unit: 'px',
+            format: [pdfWidth, height],
+          });
+          
+          pdf.addImage(dataUrl, 'JPEG', 0, 0, pdfWidth, height);
+          const fileName = `kmitl-nova-${active}.pdf`;
+          // Force generic binary MIME type so iOS Safari shows download prompt instead of opening it
+          const blob = new Blob([pdf.output('blob')], { type: 'application/octet-stream' });
 
-        // Chrome/Edge: use Save As dialog with correct filename
-        if ('showSaveFilePicker' in window) {
-          try {
-            const handle = await (window as any).showSaveFilePicker({
-              suggestedName: fileName,
-              types: [{ description: 'JPEG Image', accept: { 'image/jpeg': ['.jpg'] } }],
-            });
-            const writable = await handle.createWritable();
-            await writable.write(blob);
-            await writable.close();
+          if ('showSaveFilePicker' in window) {
+            try {
+              const handle = await (window as any).showSaveFilePicker({
+                suggestedName: fileName,
+                types: [{ description: 'PDF Document', accept: { 'application/pdf': ['.pdf'] } }],
+              });
+              const writable = await handle.createWritable();
+              await writable.write(blob);
+              await writable.close();
+              setIsExporting(false);
+              return;
+            } catch { /* user cancelled */ }
             setIsExporting(false);
             return;
-          } catch { /* user cancelled, do nothing */ }
-          setIsExporting(false);
-          return;
-        }
+          }
 
-        // Safari/Firefox/Brave: anchor download works fine
-        const blobUrl = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = blobUrl;
-        link.download = fileName;
-        link.style.display = 'none';
-        document.body.appendChild(link);
-        link.click();
-        setTimeout(() => {
-          document.body.removeChild(link);
-          URL.revokeObjectURL(blobUrl);
-        }, 10000);
+          // Safari/Firefox/Brave: anchor download works fine
+          const blobUrl = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = blobUrl;
+          link.download = fileName;
+          link.style.display = 'none';
+          document.body.appendChild(link);
+          link.click();
+          setTimeout(() => {
+            document.body.removeChild(link);
+            URL.revokeObjectURL(blobUrl);
+          }, 10000);
+        } else {
+          const fileName = `kmitl-nova-${active}.jpg`;
+          const [header, base64] = dataUrl.split(',');
+          const mime = header.match(/:(.*?);/)?.[1] ?? 'image/jpeg';
+          const binary = atob(base64);
+          const bytes = new Uint8Array(binary.length);
+          for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+          const blob = new Blob([bytes], { type: mime });
+
+          // Chrome/Edge: use Save As dialog with correct filename
+          if ('showSaveFilePicker' in window) {
+            try {
+              const handle = await (window as any).showSaveFilePicker({
+                suggestedName: fileName,
+                types: [{ description: 'JPEG Image', accept: { 'image/jpeg': ['.jpg'] } }],
+              });
+              const writable = await handle.createWritable();
+              await writable.write(blob);
+              await writable.close();
+              setIsExporting(false);
+              return;
+            } catch { /* user cancelled, do nothing */ }
+            setIsExporting(false);
+            return;
+          }
+
+          // Safari/Firefox/Brave: anchor download works fine
+          const blobUrl = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = blobUrl;
+          link.download = fileName;
+          link.style.display = 'none';
+          document.body.appendChild(link);
+          link.click();
+          setTimeout(() => {
+            document.body.removeChild(link);
+            URL.revokeObjectURL(blobUrl);
+          }, 10000);
+        }
       } catch (err) {
         console.error(err);
+        alert(`Export error: ${err instanceof Error ? err.message : String(err)}`);
       } finally {
         setIsExporting(false);
       }
@@ -389,7 +439,7 @@ export default function App() {
       onSemesterChange={(value) => handleSelectionChange({ semester: value })}
       onYearChange={(value) => handleSelectionChange({ year: value })}
       onExamKindChange={(value) => handleSelectionChange({ examKind: value })}
-      onExport={() => void handleExport()}
+      onExport={(format) => void handleExport(format)}
       onLogout={() => void handleLogout()}
       isExporting={isExporting}
     >

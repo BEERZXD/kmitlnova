@@ -1793,3 +1793,47 @@ button:disabled {
     padding: 10px 20px;
   }
 }
+
+.export-dropdown {
+  position: relative;
+  display: inline-block;
+}
+.export-dropdown-content {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: 100%;
+  margin-top: 4px;
+  background-color: var(--surface);
+  min-width: 140px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  z-index: 10;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 4px 0;
+}
+.export-dropdown:hover .export-dropdown-content,
+.export-dropdown:focus-within .export-dropdown-content {
+  display: block;
+}
+.export-dropdown-content button {
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 10px 16px;
+  cursor: pointer;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.95em;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.export-dropdown-content button:hover {
+  background-color: var(--background);
+}
+.export-dropdown-content button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

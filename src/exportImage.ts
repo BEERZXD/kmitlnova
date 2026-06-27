@@ -7,7 +7,7 @@ export function buildExportImageOptions(node: HTMLElement) {
   return {
     quality: 0.96,
     backgroundColor: '#ffffff',
-    pixelRatio: 2,
+    pixelRatio: 4, // Upgraded to 4x resolution for both Image and PDF
     width: Math.ceil(node.scrollWidth),
     height: Math.ceil(node.scrollHeight),
     style: {

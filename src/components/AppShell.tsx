@@ -1,4 +1,4 @@
-import { Download, LogOut } from 'lucide-react';
+import { Download, Image as ImageIcon, FileText, LogOut } from 'lucide-react';
 import type { ReactNode } from 'react';
 import type { ApiOption, ReportType } from '../types';
 import { AppFooter } from './AppFooter';
@@ -25,7 +25,7 @@ type AppShellProps = {
   onSemesterChange: (value: string) => void;
   onYearChange: (value: string) => void;
   onExamKindChange: (value: string) => void;
-  onExport: () => void;
+  onExport: (format: 'image' | 'pdf') => void;
   onLogout: () => void;
   isExporting?: boolean;
   children: ReactNode;
@@ -121,10 +121,20 @@ export function AppShell({
           ) : null}
         </div>
         <div className="actions">
-          <button className="icon-text-button" type="button" onClick={onExport} disabled={isLoading || isExporting} title="Export image">
-            <Download size={18} />
-            {isExporting ? 'Exporting...' : 'Export image'}
-          </button>
+          <div className="export-dropdown">
+            <button className="icon-text-button" type="button" disabled={isLoading || isExporting} title="Export">
+              <Download size={18} />
+              {isExporting ? 'Exporting...' : 'Export'}
+            </button>
+            <div className="export-dropdown-content">
+              <button type="button" onClick={() => onExport('image')} disabled={isLoading || isExporting}>
+                <ImageIcon size={16} /> Image (.jpg)
+              </button>
+              <button type="button" onClick={() => onExport('pdf')} disabled={isLoading || isExporting}>
+                <FileText size={16} /> PDF (.pdf)
+              </button>
+            </div>
+          </div>
         </div>
       </section>
 
