@@ -180,9 +180,7 @@ describe('report styling contracts', () => {
     expect(css).toContain('height: auto');
   });
 
-  it('loads Kanit from external Google Fonts', () => {
-    expect(indexHtml).toContain('https://fonts.googleapis.com');
-    expect(indexHtml).toContain('https://fonts.gstatic.com');
+  it('loads KMITL connection preconnect', () => {
     expect(indexHtml).toContain('rel="preconnect" href="https://www.kmitl.ac.th"');
   });
 
