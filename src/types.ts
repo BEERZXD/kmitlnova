@@ -82,6 +82,7 @@ export type GradeCourse = {
   credit: string;
   type: string;
   grade: string;
+  isPublished?: boolean;
 };
 
 export type GradeSummary = {

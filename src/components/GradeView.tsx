@@ -1,19 +1,23 @@
 import { useMemo } from 'react';
-import type { GradeReport } from '../types';
+import type { GradeCourse, GradeReport } from '../types';
 import { subjectPalette } from '../reportDisplay';
 import { ReportTitleCard } from './ReportTitleCard';
 
 const gradeTitle = 'ผลการเรียน';
 
-function gradeColor(grade: string) {
-  const normalized = grade.trim().toUpperCase();
+function gradeColor(course: GradeCourse) {
+  const normalized = course.grade.trim().toUpperCase();
   if (normalized === 'A') return '#10b981';
   if (normalized === 'B+' || normalized === 'B') return '#3b82f6';
   if (normalized === 'C+' || normalized === 'C') return '#f59e0b';
   if (normalized === 'D+' || normalized === 'D') return '#f97316';
   if (normalized === 'F' || normalized === 'U') return '#ef4444';
   if (normalized === 'S') return '#8b5cf6';
-  if (normalized.includes('X')) return '#6b7280';
+  if (normalized.includes('X')) {
+    if (course.isPublished === true) return '#10b981';
+    if (course.isPublished === false) return '#ef4444';
+    return '#6b7280';
+  }
   return '#6b7280';
 }
 
@@ -54,7 +58,7 @@ export function GradeView({ report }: { report: GradeReport }) {
                   <td>{course.section}</td>
                   <td>{course.credit}</td>
                   <td>{course.type}</td>
-                  <td className="kpm-grade-value" style={{ color: gradeColor(course.grade) }}>{course.grade}</td>
+                  <td className="kpm-grade-value" style={{ color: gradeColor(course) }}>{course.grade}</td>
                 </tr>
               ))}
             </tbody>

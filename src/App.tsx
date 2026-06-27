@@ -189,6 +189,19 @@ export default function App() {
 
 
   useEffect(() => {
+    import('./kanitFonts')
+      .then(({ kanitFontsCSS }) => {
+        if (!document.getElementById('kanit-base64-cache')) {
+          const styleEl = document.createElement('style');
+          styleEl.id = 'kanit-base64-cache';
+          styleEl.innerHTML = kanitFontsCSS;
+          document.head.appendChild(styleEl);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
     if (loggedIn) void loadReport(active);
   }, [active, loggedIn]);
 
@@ -249,64 +262,87 @@ export default function App() {
     if (!node) return;
 
     setIsExporting(true);
-    try {
-      const { toJpeg } = await import('html-to-image');
-      const capture = createCenteredExportNode(node);
-      let dataUrl: string;
+
+    // Defer the heavy import and image generation to allow the browser 
+    // to paint the "Exporting..." state change first.
+    setTimeout(async () => {
       try {
-        const options = buildExportImageOptions(capture.node);
+        const { toJpeg } = await import('html-to-image');
+        const { kanitFontsCSS } = await import('./kanitFonts');
 
-        // Wait one frame to let browser compute styles of offscreen clone
-        await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
+        // Find and temporarily disable Google Fonts stylesheets to prevent html-to-image from duplicate crawling
+        const googleFontSheets = Array.from(document.styleSheets).filter(
+          (sheet) => sheet.href?.includes('fonts.googleapis.com')
+        );
+        googleFontSheets.forEach((sheet) => {
+          sheet.disabled = true;
+        });
 
-        // Warm up WebKit layout engine (double-call workaround for Safari iOS)
-        await toJpeg(capture.node, options);
-        // Real capture
-        dataUrl = await toJpeg(capture.node, options);
-      } finally {
-        capture.cleanup();
-      }
-
-      const fileName = `kmitl-nova-${active}.jpg`;
-      const [header, base64] = dataUrl.split(',');
-      const mime = header.match(/:(.*?);/)?.[1] ?? 'image/jpeg';
-      const binary = atob(base64);
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-      const blob = new Blob([bytes], { type: mime });
-
-      // Chrome/Edge: use Save As dialog with correct filename
-      if ('showSaveFilePicker' in window) {
+        const capture = createCenteredExportNode(node);
+        let dataUrl: string;
         try {
-          const handle = await (window as any).showSaveFilePicker({
-            suggestedName: fileName,
-            types: [{ description: 'JPEG Image', accept: { 'image/jpeg': ['.jpg'] } }],
-          });
-          const writable = await handle.createWritable();
-          await writable.write(blob);
-          await writable.close();
-          return;
-        } catch { /* user cancelled, do nothing */ }
-        return;
-      }
+          // Wait one frame to let browser compute styles of offscreen clone
+          await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
 
-      // Safari/Firefox/Brave: anchor download works fine
-      const blobUrl = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = blobUrl;
-      link.download = fileName;
-      link.style.display = 'none';
-      document.body.appendChild(link);
-      link.click();
-      setTimeout(() => {
-        document.body.removeChild(link);
-        URL.revokeObjectURL(blobUrl);
-      }, 10000);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsExporting(false);
-    }
+          const exportOptions = {
+            ...buildExportImageOptions(capture.node),
+            fontEmbedCSS: kanitFontsCSS,
+          };
+
+          // Single capture without the Safari double-call to halve the rendering time
+          dataUrl = await toJpeg(capture.node, exportOptions);
+        } finally {
+          capture.cleanup();
+          
+          // Restore page state instantly with no visual FOUT
+          googleFontSheets.forEach((sheet) => {
+            sheet.disabled = false;
+          });
+        }
+
+        const fileName = `kmitl-nova-${active}.jpg`;
+        const [header, base64] = dataUrl.split(',');
+        const mime = header.match(/:(.*?);/)?.[1] ?? 'image/jpeg';
+        const binary = atob(base64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        const blob = new Blob([bytes], { type: mime });
+
+        // Chrome/Edge: use Save As dialog with correct filename
+        if ('showSaveFilePicker' in window) {
+          try {
+            const handle = await (window as any).showSaveFilePicker({
+              suggestedName: fileName,
+              types: [{ description: 'JPEG Image', accept: { 'image/jpeg': ['.jpg'] } }],
+            });
+            const writable = await handle.createWritable();
+            await writable.write(blob);
+            await writable.close();
+            setIsExporting(false);
+            return;
+          } catch { /* user cancelled, do nothing */ }
+          setIsExporting(false);
+          return;
+        }
+
+        // Safari/Firefox/Brave: anchor download works fine
+        const blobUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = fileName;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        setTimeout(() => {
+          document.body.removeChild(link);
+          URL.revokeObjectURL(blobUrl);
+        }, 10000);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setIsExporting(false);
+      }
+    }, 100);
   }
 
   function handleSelectionChange(next: Partial<ReportParams>) {

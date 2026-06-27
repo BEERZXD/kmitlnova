@@ -143,14 +143,16 @@ describe('report styling contracts', () => {
     expect(loginView).toContain('login-visual-image inactive');
     expect(loginView).not.toContain('login-visual-image exiting');
     expect(loginView).not.toContain('login-visual-image idle');
-    expect(cssRule('.login-page')).toContain('grid-template-rows: 1fr auto');
-    expect(cssRule('.login-page')).toContain('height: 100dvh');
-    expect(cssRule('.login-page')).toContain('row-gap: 20px');
-    expect(cssRule('.login-page')).toContain('overflow: hidden');
-    expect(cssRule('.login-page .app-footer')).toContain('margin-top: 0');
+    expect(cssRule('.login-page')).toContain('min-height: 100dvh');
+    expect(cssRule('.login-page')).toContain('display: flex');
+    expect(cssRule('.login-page')).toContain('flex-direction: column');
+    expect(cssRule('.login-page')).toContain('align-items: center');
+    expect(cssRule('.login-page')).toContain('padding: 24px');
+    expect(cssRule('.login-page')).toContain('overflow-y: auto');
+    expect(cssRule('.login-page')).toContain('overflow-x: hidden');
+    expect(cssRule('.login-page .app-footer')).toContain('margin-top: 24px');
     expect(cssRule('.login-layout')).toContain('grid-template-columns: minmax(0, 1.08fr) minmax(360px, 0.92fr)');
-    expect(cssRule('.login-layout')).toContain('height: min(620px, calc(100dvh - 128px))');
-    expect(cssRule('.login-layout')).toContain('max-height: 100%');
+    expect(cssRule('.login-layout')).toContain('min-height: 620px');
     expect(cssRule('.login-visual')).toContain('min-height: 0');
     expect(cssRule('.login-visual')).toContain('height: 100%');
     expect(cssRule('.login-page .brand-mark')).toContain('width: 64px');
@@ -173,14 +175,14 @@ describe('report styling contracts', () => {
     expect(css).toContain('@media (max-width: 899px)');
     expect(css).toContain('align-items: center');
     expect(css).toContain('grid-template-columns: 1fr');
-    expect(css).toContain('grid-template-rows: minmax(96px, 28%) minmax(0, 1fr)');
+    expect(css).toContain('grid-template-rows: 260px auto');
+    expect(css).toContain('grid-template-rows: 160px auto');
     expect(css).toContain('height: auto');
   });
 
-  it('loads Kanit from local fontsource package instead of external Google Fonts', () => {
-    expect(css).not.toContain('@import url("https://fonts.googleapis.com');
-    expect(indexHtml).not.toContain('https://fonts.googleapis.com');
-    expect(indexHtml).not.toContain('https://fonts.gstatic.com');
+  it('loads Kanit from external Google Fonts', () => {
+    expect(indexHtml).toContain('https://fonts.googleapis.com');
+    expect(indexHtml).toContain('https://fonts.gstatic.com');
     expect(indexHtml).toContain('rel="preconnect" href="https://www.kmitl.ac.th"');
   });
 
