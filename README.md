@@ -2,6 +2,8 @@
 
 A standalone web application for viewing KMITL registrar data with a modern, clean interface. Supports study timetables, exam timetables, grade results, and image export.
 
+เว็บแอปพลิเคชันสำหรับดูข้อมูลสำนักทะเบียน KMITL (สจล.) ด้วยอินเทอร์เฟซที่ทันสมัยและสะอาดตา รองรับการดูตารางเรียน ตารางสอบ ผลการเรียน และการส่งออกเป็นรูปภาพ
+
 ## Features
 
 - **Study Timetable** — Visual grid layout with color-coded subjects, time slots, and room information.
@@ -16,7 +18,7 @@ A standalone web application for viewing KMITL registrar data with a modern, cle
 - **Backend:** Node.js with native HTTP and per-session in-memory state
 - **Image Export:** html-to-image
 - **Icons:** lucide-react
-- **Analytics:** @vercel/analytics
+- **Analytics:** Cloudflare Web Analytics
 - **Hosting:** Vercel (Singapore region)
 
 ## Getting Started
@@ -93,7 +95,3 @@ vercel.json           Vercel deployment configuration
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
-
-## Repository Notes
-
-`project.md` is treated as local workspace documentation and is intentionally ignored by Git and Vercel uploads because it is not required to build, deploy, or run the live app.

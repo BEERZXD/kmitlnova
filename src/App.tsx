@@ -187,6 +187,7 @@ export default function App() {
       .catch(() => {});
   }, []);
 
+
   useEffect(() => {
     if (loggedIn) void loadReport(active);
   }, [active, loggedIn]);
@@ -253,13 +254,15 @@ export default function App() {
       const capture = createCenteredExportNode(node);
       let dataUrl: string;
       try {
+        const options = buildExportImageOptions(capture.node);
+
         // Wait one frame to let browser compute styles of offscreen clone
         await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
 
         // Warm up WebKit layout engine (double-call workaround for Safari iOS)
-        await toJpeg(capture.node, buildExportImageOptions(capture.node));
+        await toJpeg(capture.node, options);
         // Real capture
-        dataUrl = await toJpeg(capture.node, buildExportImageOptions(capture.node));
+        dataUrl = await toJpeg(capture.node, options);
       } finally {
         capture.cleanup();
       }
