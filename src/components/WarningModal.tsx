@@ -4,10 +4,10 @@ export function WarningModal() {
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
-    const lastDismissedDate = localStorage.getItem('kmitlnova-warning-dismissed-date');
-    const today = new Date().toDateString();
+    const lastDismissedTime = localStorage.getItem('kmitlnova-warning-dismissed-time');
+    const now = Date.now();
     
-    if (lastDismissedDate !== today) {
+    if (!lastDismissedTime || now - Number(lastDismissedTime) > 60 * 60 * 1000) {
       setIsOpen(true);
     }
   }, []);
@@ -15,8 +15,7 @@ export function WarningModal() {
   if (!isOpen) return null;
 
   function handleClose() {
-    const today = new Date().toDateString();
-    localStorage.setItem('kmitlnova-warning-dismissed-date', today);
+    localStorage.setItem('kmitlnova-warning-dismissed-time', String(Date.now()));
     setIsOpen(false);
   }
 
