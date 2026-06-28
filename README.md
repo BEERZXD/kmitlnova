@@ -15,7 +15,7 @@ A standalone web application for viewing KMITL registrar data with a modern, cle
 ## Tech Stack
 
 - **Frontend:** React 19, TypeScript, Vite, CSS
-- **Backend:** Node.js with native HTTP and per-session in-memory state
+- **Backend:** Private API service with serverless proxy
 - **Image Export:** html-to-image
 - **Icons:** lucide-react
 - **Analytics:** Cloudflare Web Analytics
@@ -57,18 +57,15 @@ npm test
 ## How It Works
 
 1. The user logs in with their KMITL student ID and password.
-2. The backend authenticates against the KMITL registrar via JWT and legacy SSO flows.
-3. Credentials and session data are held in server memory only — nothing is written to disk or stored in the browser.
-4. Report data is fetched from registrar APIs and legacy HTML pages, parsed, and returned as structured JSON.
-5. The frontend renders the data in timetable grids and tables.
+2. The application proxies the request securely to a private backend API.
+3. Credentials and session data are managed in memory—nothing is written to disk or stored in the browser.
+4. The frontend receives structured JSON data and renders the timetable grids and tables.
 
 ## Security
 
-- Credentials, cookies, and JWT tokens exist only in backend process memory.
-- No student data is persisted to files, databases, or browser storage.
-- Sessions are isolated per browser via an opaque `HttpOnly` cookie.
-- Sessions expire after 30 minutes of inactivity.
-- All state is cleared on logout or server restart.
+- Credentials and session tokens are processed securely by a private backend.
+- No student data is persisted to public files, databases, or browser storage.
+- Sessions are isolated per browser via secure HTTP cookies.
 
 ## Project Structure
 
@@ -80,17 +77,10 @@ src/                  Frontend React application
   styles.css          Global styles
   exportImage.ts      Image export logic
 
-server/               Backend Node.js server
-  app.js              Request handler and session management
-  index.js            Local HTTP server entrypoint
-  registrar/          KMITL registrar integration
-    client.js         Login, session, and report fetching
-    parsers.js        Legacy HTML page parsers
-    apiMappers.js     Registration API to app model mappers
-
-api/                  Vercel serverless entrypoint
+api/                  Vercel serverless proxy entrypoint
 vercel.json           Vercel deployment configuration
 ```
+
 
 ## License
 
