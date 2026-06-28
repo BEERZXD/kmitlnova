@@ -22,7 +22,7 @@ export default async function handler(req, res) {
   const targetUrl = new URL(url.pathname + url.search, privateApiUrl).toString();
 
   try {
-    // Read request body for write methods
+    // Read request body for write methods (POST, PUT, etc.)
     let body = undefined;
     if (req.method !== 'GET' && req.method !== 'HEAD') {
       const chunks = [];
@@ -32,14 +32,24 @@ export default async function handler(req, res) {
       body = chunks.length ? Buffer.concat(chunks) : undefined;
     }
 
-    // Prepare headers for proxying
+    // Clean and prepare request headers for forwarding
     const headers = {};
     for (const [key, value] of Object.entries(req.headers)) {
-      if (key.toLowerCase() === 'host') {
-        headers['host'] = new URL(privateApiUrl).host;
-      } else {
-        headers[key] = value;
+      const lowerKey = key.toLowerCase();
+      // Skip hop-by-hop headers, content-length, and compression headers
+      if ([
+        'host', 'connection', 'keep-alive', 'transfer-encoding', 
+        'content-length', 'accept-encoding', 'content-encoding'
+      ].includes(lowerKey)) {
+        continue;
       }
+      headers[lowerKey] = value;
+    }
+
+    // Set target host and appropriate content-length
+    headers['host'] = new URL(privateApiUrl).host;
+    if (body) {
+      headers['content-length'] = String(body.length);
     }
 
     // Call the private scraper API
@@ -50,18 +60,22 @@ export default async function handler(req, res) {
       redirect: 'manual',
     });
 
-    // Copy response headers back to client
+    // Copy response headers back to client (skipping response size/encoding headers)
     for (const [key, value] of response.headers.entries()) {
-      if (key.toLowerCase() !== 'transfer-encoding') {
+      const lowerKey = key.toLowerCase();
+      if (![
+        'transfer-encoding', 'connection', 'content-encoding', 
+        'content-length', 'keep-alive'
+      ].includes(lowerKey)) {
         res.setHeader(key, value);
       }
     }
 
     res.status(response.status);
     
-    // Send response bytes
+    // Read response as arrayBuffer and send using native res.end()
     const resBuffer = Buffer.from(await response.arrayBuffer());
-    res.send(resBuffer);
+    res.end(resBuffer);
   } catch (error) {
     console.error('Proxy error:', error);
     res.status(500).json({ 
