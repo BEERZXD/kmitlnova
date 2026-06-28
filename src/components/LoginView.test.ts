@@ -32,6 +32,26 @@ describe('getLoginImageClassName', () => {
     expect(getLoginImageClassName(0, 0)).toBe('login-visual-image active');
     expect(getLoginImageClassName(1, 0)).toBe('login-visual-image inactive');
   });
+
+  it('keeps the previous image active if the new active image has not loaded yet', () => {
+    const loadedIndexes = new Set([0]); // image 0 loaded, image 1 not loaded
+    const lastLoaded = 0;
+    
+    // image 1 is the active target, but is not loaded
+    // so image 0 (the last loaded) stays active
+    expect(getLoginImageClassName(0, 1, lastLoaded, loadedIndexes)).toBe('login-visual-image active');
+    expect(getLoginImageClassName(1, 1, lastLoaded, loadedIndexes)).toBe('login-visual-image inactive');
+  });
+
+  it('deactivates the previous image once the new active image has finished loading', () => {
+    const loadedIndexes = new Set([0, 1]); // both loaded
+    const lastLoaded = 1;
+    
+    // image 1 is active, and is loaded
+    // so image 0 is inactive, and image 1 is active
+    expect(getLoginImageClassName(0, 1, lastLoaded, loadedIndexes)).toBe('login-visual-image inactive');
+    expect(getLoginImageClassName(1, 1, lastLoaded, loadedIndexes)).toBe('login-visual-image active');
+  });
 });
 
 describe('getRenderableLoginImageIndexes', () => {

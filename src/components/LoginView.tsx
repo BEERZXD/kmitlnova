@@ -2,7 +2,6 @@ import { FormEvent, KeyboardEvent, useEffect, useState } from 'react';
 import { LockKeyhole, LogIn, UserRound } from 'lucide-react';
 import { AppFooter } from './AppFooter';
 
-const kmitlLogoUrl = 'https://www.kmitl.ac.th/themes/custom/kmitl/logo.svg';
 const loginImagesConfigUrl = '/login-images.txt';
 const loginImageCycleMs = 5000;
 const defaultLoginImagePosition = '50% 50%';
@@ -48,8 +47,19 @@ export function parseLoginImageList(text: string) {
 export function getLoginImageClassName(
   imageIndex: number,
   activeLoginImageIndex: number,
+  lastLoadedIndex: number | null = null,
+  loadedLoginImageIndexes: Set<number> = new Set(),
 ) {
-  if (imageIndex === activeLoginImageIndex) {
+  const isLoaded = loadedLoginImageIndexes.has(imageIndex);
+
+  if (imageIndex === activeLoginImageIndex && (isLoaded || loadedLoginImageIndexes.size === 0)) {
+    return 'login-visual-image active';
+  }
+
+  if (
+    !loadedLoginImageIndexes.has(activeLoginImageIndex) &&
+    imageIndex === lastLoadedIndex
+  ) {
     return 'login-visual-image active';
   }
 
@@ -99,6 +109,7 @@ export function LoginView({ error, isLoading, onSubmit, onSuccess }: LoginViewPr
   const [loginImages, setLoginImages] = useState(fallbackLoginImages);
   const [activeLoginImageIndex, setActiveLoginImageIndex] = useState(0);
   const [loadedLoginImageIndexes, setLoadedLoginImageIndexes] = useState<Set<number>>(() => new Set());
+  const [lastLoadedIndex, setLastLoadedIndex] = useState<number | null>(null);
   const [shouldRenderNextLoginImage, setShouldRenderNextLoginImage] = useState(false);
 
   useEffect(() => {
@@ -112,6 +123,7 @@ export function LoginView({ error, isLoading, onSubmit, onSuccess }: LoginViewPr
         setLoginImages(configuredImages.length > 0 ? configuredImages : fallbackLoginImages);
         setActiveLoginImageIndex(0);
         setLoadedLoginImageIndexes(new Set());
+        setLastLoadedIndex(null);
         setShouldRenderNextLoginImage(false);
       })
       .catch(() => {
@@ -119,6 +131,7 @@ export function LoginView({ error, isLoading, onSubmit, onSuccess }: LoginViewPr
         setLoginImages(fallbackLoginImages);
         setActiveLoginImageIndex(0);
         setLoadedLoginImageIndexes(new Set());
+        setLastLoadedIndex(null);
         setShouldRenderNextLoginImage(false);
       });
 
@@ -201,7 +214,12 @@ export function LoginView({ error, isLoading, onSubmit, onSuccess }: LoginViewPr
             return (
               <img
                 key={`${image.src}-${imageIndex}`}
-                className={getLoginImageClassName(imageIndex, activeLoginImageIndex)}
+                className={getLoginImageClassName(
+                  imageIndex,
+                  activeLoginImageIndex,
+                  lastLoadedIndex,
+                  loadedLoginImageIndexes,
+                )}
                 src={image.src}
                 style={{ objectPosition: image.objectPosition }}
                 loading={shouldEagerLoad ? 'eager' : 'lazy'}
@@ -215,6 +233,7 @@ export function LoginView({ error, isLoading, onSubmit, onSuccess }: LoginViewPr
                     return next;
                   });
                   if (imageIndex === activeLoginImageIndex) {
+                    setLastLoadedIndex(imageIndex);
                     setShouldRenderNextLoginImage(true);
                   }
                 }}
@@ -227,7 +246,6 @@ export function LoginView({ error, isLoading, onSubmit, onSuccess }: LoginViewPr
         <section className="login-form-column">
           <div className="login-panel" aria-labelledby="login-title">
             <div className="brand-lockup">
-              <img className="brand-mark" src={kmitlLogoUrl} alt="KMITL logo" />
               <div>
                 <h1 id="login-title">KMITL Nova</h1>
                 <p>ระบบดึงข้อมูลการเรียน สจล.</p>

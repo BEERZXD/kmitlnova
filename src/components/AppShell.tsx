@@ -3,8 +3,6 @@ import type { ReactNode } from 'react';
 import type { ApiOption, ReportType } from '../types';
 import { AppFooter } from './AppFooter';
 
-const kmitlLogoUrl = 'https://www.kmitl.ac.th/themes/custom/kmitl/logo.svg';
-
 const tabs: Array<{ type: ReportType; label: string; sublabel: string }> = [
   { type: 'study', label: 'ตารางเรียน', sublabel: 'Study timetable' },
   { type: 'exam', label: 'ตารางสอบ', sublabel: 'Exam timetable' },
@@ -81,7 +79,6 @@ export function AppShell({
     <main className="app-shell">
       <header className="topbar">
         <div className="brand-lockup compact">
-          <img className="brand-mark" src={kmitlLogoUrl} alt="KMITL logo" />
           <div>
             <h1>KMITL Nova</h1>
             <p>ระบบดึงข้อมูลการเรียน สจล.</p>
