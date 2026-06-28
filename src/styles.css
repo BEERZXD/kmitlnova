@@ -154,6 +154,10 @@ button:disabled {
   margin: 0;
 }
 
+.brand-lockup h1 span {
+  color: var(--accent);
+}
+
 .brand-lockup p {
   color: var(--text-2);
   font-size: 14px;

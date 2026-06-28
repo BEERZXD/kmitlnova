@@ -247,7 +247,7 @@ export function LoginView({ error, isLoading, onSubmit, onSuccess }: LoginViewPr
           <div className="login-panel" aria-labelledby="login-title">
             <div className="brand-lockup">
               <div>
-                <h1 id="login-title">KMITL Nova</h1>
+                <h1 id="login-title"><span>KMITL</span> Nova</h1>
                 <p>ระบบดึงข้อมูลการเรียน สจล.</p>
               </div>
             </div>

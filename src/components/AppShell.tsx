@@ -80,7 +80,7 @@ export function AppShell({
       <header className="topbar">
         <div className="brand-lockup compact">
           <div>
-            <h1>KMITL Nova</h1>
+            <h1><span>KMITL</span> Nova</h1>
             <p>ระบบดึงข้อมูลการเรียน สจล.</p>
           </div>
         </div>
